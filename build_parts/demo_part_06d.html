@@ -1,0 +1,102 @@
+<script>
+/* ============================================================
+   09 — THE PAPER · markdown renderer + TOC + scrollspy
+   ============================================================ */
+(function article(){
+const raw=(document.getElementById('article-md')||{}).textContent||'';
+const paper=$('#paper'),tocNav=$('#toc-nav');
+if(!raw||!paper)return;
+
+function esc(s){return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+function inline(s){
+  return s
+    .replace(/`([^`]+)`/g,'<code style="font-family:var(--font-mono);font-size:.86em;color:var(--gold);background:rgba(240,177,62,.08);padding:2px 6px;border-radius:6px">$1</code>')
+    .replace(/\*\*([^*]+)\*\*/g,'<strong>$1</strong>')
+    .replace(/\*([^*\n]+)\*/g,'<em>$1</em>')
+    .replace(/\[([^\]]+)\]\(([^)]+)\)/g,'<a href="$2" target="_blank" rel="noopener">$1</a>');
+}
+function slug(t){return 'a'+t.toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'').slice(0,40);}
+
+const lines=raw.split('\n');
+let html='',i=0,toc=[],firstH1=true,parasAfterH1=0,abstractDone=false;
+const tocItems=[];
+while(i<lines.length){
+  const line=lines[i];
+  if(!line.trim()){i++;continue;}
+  /* headings */
+  const h=line.match(/^(#{1,3})\s+(.*)$/);
+  if(h){
+    const lvl=h[1].length,text=h[2].trim();
+    const id=slug(text);
+    if(lvl===1&&firstH1){html+='<h1 id="'+id+'">'+inline(esc(text))+'</h1>';firstH1=false;}
+    else if(lvl<=2){html+='<h2 id="'+id+'">'+inline(esc(text))+'</h2>';tocItems.push({id,text,lvl:2});}
+    else{html+='<h3 id="'+id+'">'+inline(esc(text))+'</h3>';tocItems.push({id,text,lvl:3});}
+    i++;continue;
+  }
+  /* hr */
+  if(/^---+\s*$/.test(line)){html+='<hr>';i++;continue;}
+  /* table */
+  if(/^\|.*\|\s*$/.test(line.trim())){
+    const rows=[];
+    while(i<lines.length&&/^\s*\|.*\|\s*$/.test(lines[i])){rows.push(lines[i].trim());i++;}
+    const cells=r=>r.slice(1,-1).split('|').map(c=>c.trim());
+    const head=cells(rows[0]);
+    let t='<table><thead><tr>'+head.map(c=>'<th>'+inline(esc(c))+'</th>').join('')+'</tr></thead><tbody>';
+    for(let r=1;r<rows.length;r++){
+      if(/^\|[\s:-]+\|$/.test(rows[r].replace(/[^|:\-\s]/g,'')))continue;
+      t+='<tr>'+cells(rows[r]).map(c=>'<td>'+inline(esc(c))+'</td>').join('')+'</tr>';
+    }
+    t+='</tbody></table>';html+=t;continue;
+  }
+  /* blockquote */
+  if(/^>\s?/.test(line)){
+    let q='';
+    while(i<lines.length&&/^>\s?/.test(lines[i])){q+=lines[i].replace(/^>\s?/,'')+' ';i++;}
+    html+='<blockquote>'+inline(esc(q.trim()))+'</blockquote>';continue;
+  }
+  /* unordered list */
+  if(/^[-*]\s+/.test(line)){
+    let items=[];
+    while(i<lines.length&&/^[-*]\s+/.test(lines[i])){items.push(lines[i].replace(/^[-*]\s+/,''));i++;}
+    html+='<ul>'+items.map(it=>'<li>'+inline(esc(it))+'</li>').join('')+'</ul>';continue;
+  }
+  /* ordered list */
+  if(/^\d+\.\s+/.test(line)){
+    let items=[];
+    while(i<lines.length&&/^\d+\.\s+/.test(lines[i])){items.push(lines[i].replace(/^\d+\.\s+/,''));i++;}
+    html+='<ol class="refs">'+items.map(it=>'<li>'+inline(esc(it))+'</li>').join('')+'</ol>';continue;
+  }
+  /* paragraph */
+  let p='';
+  while(i<lines.length&&lines[i].trim()&&!/^(#{1,3}\s|[-*]\s|\d+\.\s|>|---+\s*$|\|)/.test(lines[i])){
+    p+=lines[i].trim()+' ';i++;
+  }
+  p=p.trim();
+  if(p){
+    const rendered='<p>'+inline(esc(p))+'</p>';
+    if(!abstractDone){html+='<div class="abstract"><span class="ab-t">Abstract</span>'+rendered+'</div>';abstractDone=true;}
+    else html+=rendered;
+  }
+}
+paper.innerHTML=html;
+
+/* TOC */
+let th='';
+tocItems.forEach(t=>{th+='<a href="#'+t.id+'" class="'+(t.lvl===3?'lv3':'')+'" data-id="'+t.id+'">'+esc(t.text)+'</a>';});
+tocNav.innerHTML=th;
+
+/* abstract wrapper fallback handled above */
+
+/* scrollspy */
+const spy=new IntersectionObserver(es=>{
+  es.forEach(e=>{
+    if(e.isIntersecting){
+      $$('#toc-nav a').forEach(a=>a.classList.toggle('active',a.dataset.id===e.target.id));
+    }
+  });
+},{rootMargin:'-90px 0px -68% 0px'});
+tocItems.forEach(t=>{const el=document.getElementById(t.id);if(el)spy.observe(el);});
+})();
+</script>
+</body>
+</html>

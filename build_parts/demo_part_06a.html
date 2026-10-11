@@ -1,0 +1,237 @@
+<script src="/vendor/three.min.js"></script>
+<script>
+/* ============================================================
+   P ≠ NP — THE FIFTY-YEAR WALL · demo engine
+   ============================================================ */
+'use strict';
+const $=(s,c=document)=>c.querySelector(s);
+const $$=(s,c=document)=>[...c.querySelectorAll(s)];
+const clamp=(v,a,b)=>Math.min(b,Math.max(a,v));
+const lerp=(a,b,t)=>a+(b-a)*t;
+const rand=(a=1,b)=>b===undefined?Math.random()*a:a+Math.random()*(b-a);
+const TAU=Math.PI*2;
+const CANVAS_FONT=(w=11)=>w+'px "JetBrains Mono", monospace';
+const hasWebGL=(()=>{try{const c=document.createElement('canvas');return !!(window.WebGLRenderingContext&&(c.getContext('webgl')||c.getContext('experimental-webgl')));}catch(e){return false;}})();
+
+/* ---------- preloader ---------- */
+window.addEventListener('load',()=>setTimeout(()=>$('#preloader').classList.add('done'),900));
+setTimeout(()=>$('#preloader').classList.add('done'),3500); // safety
+
+/* ---------- readbar / nav ---------- */
+const readbar=$('#readbar'), topnav=$('#topnav');
+function onScroll(){
+  const h=document.documentElement;
+  const p=h.scrollTop/(h.scrollHeight-h.clientHeight||1);
+  readbar.style.width=(p*100)+'%';
+  topnav.classList.toggle('scrolled',h.scrollTop>40);
+}
+document.addEventListener('scroll',onScroll,{passive:true});onScroll();
+
+/* ---------- reveal on scroll ---------- */
+const revIO=new IntersectionObserver(es=>es.forEach(e=>{if(e.isIntersecting){e.target.classList.add('in');revIO.unobserve(e.target);}}),{threshold:.12});
+$$('.rv').forEach(el=>revIO.observe(el));
+
+/* ---------- shared orbit helper ---------- */
+function makeOrbit(canvas,opts={}){
+  const o={yaw:opts.yaw||0,pitch:opts.pitch||0,dist:opts.dist||12,tDist:opts.dist||12,
+    vyaw:0,vpitch:0,dragging:false,lx:0,ly:0,active:false};
+  const minP=opts.minPitch??-1.25,maxP=opts.maxPitch??1.35,minD=opts.minDist??5,maxD=opts.maxDist??46;
+  canvas.addEventListener('pointerdown',e=>{o.dragging=true;o.lx=e.clientX;o.ly=e.clientY;o.active=true;
+    try{canvas.setPointerCapture(e.pointerId);}catch(_){}});
+  canvas.addEventListener('pointermove',e=>{
+    if(!o.dragging)return;
+    const dx=e.clientX-o.lx,dy=e.clientY-o.ly;o.lx=e.clientX;o.ly=e.clientY;
+    o.vyaw=dx*0.005;o.vpitch=dy*0.004;
+    o.yaw+=o.vyaw;o.pitch=clamp(o.pitch+o.vpitch,minP,maxP);
+  });
+  window.addEventListener('pointerup',()=>{o.dragging=false;});
+  canvas.addEventListener('pointerleave',()=>{o.active=false;});
+  if(opts.zoom)canvas.addEventListener('wheel',e=>{
+    if(!o.active)return; // zoom only after the user grabbed the scene
+    e.preventDefault();
+    o.tDist=clamp(o.tDist*(1+e.deltaY*0.0012),minD,maxD);
+  },{passive:false});
+  return {
+    get yaw(){return o.yaw},set yaw(v){o.yaw=v},
+    get pitch(){return o.pitch},set pitch(v){o.pitch=clamp(v,minP,maxP)},
+    get dist(){return o.dist},set dist(v){o.dist=v},
+    get tDist(){return o.tDist},set tDist(v){o.tDist=clamp(v,minD,maxD)},
+    get dragging(){return o.dragging},get active(){return o.active},
+    tick(){o.dist=lerp(o.dist,o.tDist,0.07);
+      if(!o.dragging){o.yaw+=o.vyaw;o.vyaw*=0.94;o.pitch=clamp(o.pitch+o.vpitch,minP,maxP);o.vpitch*=0.94;}},
+    auto(v){if(!o.dragging&&opts.autoSpin!==false)o.yaw+=v;}
+  };
+}
+function camPos(orb,target){
+  const cp=Math.cos(orb.pitch);
+  return [target.x+orb.dist*cp*Math.sin(orb.yaw),target.y+orb.dist*Math.sin(orb.pitch),target.z+orb.dist*cp*Math.cos(orb.yaw)];
+}
+function makeRenderer(canvas){
+  const r=new THREE.WebGLRenderer({canvas,antialias:true,alpha:true,powerPreference:'high-performance'});
+  r.setPixelRatio(Math.min(devicePixelRatio||1,2));
+  return r;
+}
+
+/* ============================================================
+   HERO — THE FIFTY-YEAR WALL
+   P side: an orderly teal plain. NP side: an exponential ember
+   tower with floating rubble. A gold seam — the question.
+   ============================================================ */
+(function hero(){
+if(!hasWebGL)return;
+const canvas=$('#hero-canvas');if(!canvas)return;
+const renderer=makeRenderer(canvas);
+const scene=new THREE.Scene();
+scene.fog=new THREE.Fog(0x070609,26,95);
+const camera=new THREE.PerspectiveCamera(46,1,0.1,220);
+
+/* lights */
+scene.add(new THREE.AmbientLight(0x4a3d2e,0.9));
+const lTeal=new THREE.PointLight(0x3ddbb0,1.2,60);lTeal.position.set(-16,11,8);scene.add(lTeal);
+const lEmber=new THREE.PointLight(0xff6a3d,1.3,60);lEmber.position.set(16,13,8);scene.add(lEmber);
+const lGold=new THREE.PointLight(0xf0b13e,0.0,50);lGold.position.set(0,9,5);scene.add(lGold);
+
+/* ground */
+const ground=new THREE.Mesh(new THREE.PlaneGeometry(300,300),
+  new THREE.MeshStandardMaterial({color:0x0b0910,metalness:.75,roughness:.42}));
+ground.rotation.x=-Math.PI/2;ground.position.y=-0.02;scene.add(ground);
+
+/* --- build both structures into one InstancedMesh --- */
+const boxGeo=new THREE.BoxGeometry(0.92,0.92,0.92);
+const COLS=13,ROWS=14,SPACING=1.0;
+const MAXN=COLS*ROWS*16+200;
+const wall=new THREE.InstancedMesh(boxGeo,new THREE.MeshStandardMaterial({metalness:.35,roughness:.55}),MAXN);
+wall.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+const dummy=new THREE.Object3D();
+const cTeal=new THREE.Color(0x3ddbb0),cGold=new THREE.Color(0xf0b13e),cEmber=new THREE.Color(0xff6a3d),cFlash=new THREE.Color(0xffe9c4);
+const baseCol=new Array(MAXN).fill(0x000000);
+const floaters=[]; // animated rubble {i, x,y,z, rx,sp,ph, s}
+let idx=0;
+
+/* P side — the orderly plain (x < 0) */
+for(let ix=0;ix<COLS;ix++)for(let iz=0;iz<ROWS;iz++){
+  const x=-1.7-ix*SPACING,z=(iz-(ROWS-1)/2)*SPACING;
+  const h=Math.random()<0.92?1:(Math.random()<0.8?2:3);
+  for(let y=0;y<h;y++){
+    dummy.position.set(x,y+0.46,z);dummy.rotation.set(0,0,0);dummy.scale.set(1,1,1);dummy.updateMatrix();
+    wall.setMatrixAt(idx,dummy.matrix);
+    const c=cTeal.clone().multiplyScalar(0.24+Math.random()*0.16+(y===0?0:0.08));
+    wall.setColorAt(idx,c);baseCol[idx]=c.getHex();idx++;
+  }
+}
+const NP_START=idx;
+/* NP side — the chaotic exponential tower (x > 0) */
+for(let ix=0;ix<COLS;ix++){const fx=ix/(COLS-1);
+  for(let iz=0;iz<ROWS;iz++){const fz=iz/(ROWS-1);
+    const x=1.7+ix*SPACING,z=(iz-(ROWS-1)/2)*SPACING;
+    const h=1+Math.floor(Math.pow(Math.random(),1.7)*(1+fz*2.5+fx*11));
+    for(let y=0;y<h;y++){
+      dummy.position.set(x,y+0.46,z);dummy.rotation.set(0,0,0);dummy.scale.set(1,1,1);dummy.updateMatrix();
+      wall.setMatrixAt(idx,dummy.matrix);
+      const c=cGold.clone().lerp(cEmber,clamp(y/Math.max(2,h),0,1)).multiplyScalar(0.5+Math.random()*0.45);
+      wall.setColorAt(idx,c);baseCol[idx]=c.getHex();idx++;
+    }
+  }
+}
+const NP_END=idx;
+/* floating rubble — the unsearched space */
+for(let i=0;i<130&&idx<MAXN;i++){
+  const x=2.4+Math.random()*16,z=rand(-7.5,7.5),y=4.5+Math.pow(Math.random(),1.5)*15;
+  dummy.position.set(x,y,z);dummy.rotation.set(rand(TAU),rand(TAU),rand(TAU));
+  const s=rand(0.4,1.1);dummy.scale.set(s,s,s);dummy.updateMatrix();
+  wall.setMatrixAt(idx,dummy.matrix);
+  const c=cGold.clone().lerp(cEmber,Math.random()).multiplyScalar(rand(0.45,0.95));
+  wall.setColorAt(idx,c);baseCol[idx]=c.getHex();
+  floaters.push({i:idx,x,y,z,rx:rand(0.15,0.5),sp:rand(0.15,0.6),ph:rand(TAU),s});
+  idx++;
+}
+wall.count=idx;
+scene.add(wall);
+
+/* the seam — the question between the worlds */
+const seamMat=new THREE.MeshBasicMaterial({color:0xf0b13e,transparent:true,opacity:0.1,blending:THREE.AdditiveBlending,side:THREE.DoubleSide,depthWrite:false});
+const seam=new THREE.Mesh(new THREE.PlaneGeometry(0.16,26),seamMat);
+seam.position.set(0,7,0);scene.add(seam);
+const seamGlowMat=new THREE.SpriteMaterial({color:0xf0b13e,transparent:true,opacity:0.08,blending:THREE.AdditiveBlending,depthWrite:false});
+const seamGlow=new THREE.Sprite(seamGlowMat);seamGlow.scale.set(6,22,1);seamGlow.position.set(0,8,0);scene.add(seamGlow);
+
+/* dust particles */
+const pCount=620,pPos=new Float32Array(pCount*3),pCol=new Float32Array(pCount*3),pSpd=new Float32Array(pCount);
+for(let i=0;i<pCount;i++){
+  pPos[i*3]=rand(-24,24);pPos[i*3+1]=rand(0,22);pPos[i*3+2]=rand(-16,14);
+  const c=Math.random()<0.6?cGold:(Math.random()<0.5?cEmber:cTeal);
+  pCol[i*3]=c.r;pCol[i*3+1]=c.g;pCol[i*3+2]=c.b;pSpd[i]=rand(0.15,0.7);
+}
+const pGeo=new THREE.BufferGeometry();
+pGeo.setAttribute('position',new THREE.BufferAttribute(pPos,3));
+pGeo.setAttribute('color',new THREE.BufferAttribute(pCol,3));
+scene.add(new THREE.Points(pGeo,new THREE.PointsMaterial({size:0.14,vertexColors:true,transparent:true,opacity:0.7,blending:THREE.AdditiveBlending,depthWrite:false})));
+
+/* interaction */
+const orb=makeOrbit(canvas,{yaw:-0.10,pitch:0.30,dist:30,minDist:16,maxDist:40});
+orb.tDist=30;
+let mouseX=0,mouseY=0;
+canvas.addEventListener('pointermove',e=>{const r=canvas.getBoundingClientRect();
+  mouseX=(e.clientX-r.left)/r.width*2-1;mouseY=(e.clientY-r.top)/r.height*2-1;});
+const target=new THREE.Vector3(0,4.5,0);
+let visible=true;
+new IntersectionObserver(es=>visible=es[0].isIntersecting,{threshold:0.02}).observe(canvas);
+
+function resize(){
+  const w=canvas.clientWidth,h=canvas.clientHeight;if(!w||!h)return;
+  renderer.setSize(w,h,false);camera.aspect=w/h;camera.updateProjectionMatrix();
+}
+window.addEventListener('resize',resize);resize();
+
+/* scroll dolly toward the seam */
+let scrollP=0;
+function updScroll(){
+  const r=canvas.getBoundingClientRect();
+  scrollP=clamp(1-r.bottom/(innerHeight*1.15),0,1);
+}
+document.addEventListener('scroll',updScroll,{passive:true});updScroll();
+
+/* pulse waves — the living wall */
+const pulses=[];let pulseTimer=0;
+const tmpC=new THREE.Color();
+
+const clock=new THREE.Clock();
+function frame(){
+  requestAnimationFrame(frame);
+  if(!visible)return;
+  const dt=Math.min(clock.getDelta(),0.05),t=clock.elapsedTime;
+  orb.tick();
+  orb.tDist=lerp(30,18,scrollP);
+  lGold.intensity=lerp(0.1,2.4,scrollP);
+  seamMat.opacity=0.10+0.5*scrollP+Math.sin(t*2.2)*0.05;
+  seamGlowMat.opacity=0.08+0.38*scrollP;
+  /* camera */
+  const px=camPos(orb,target);
+  camera.position.set(px[0]+mouseX*1.3,px[1]-mouseY*0.7,px[2]);
+  camera.lookAt(target.x+mouseX*2.0,target.y-mouseY*0.5,target.z);
+  /* floaters bob */
+  for(const f of floaters){
+    dummy.position.set(f.x,f.y+Math.sin(t*f.sp+f.ph)*0.5,f.z);
+    dummy.rotation.set(t*f.rx*0.6,t*f.rx,t*f.sp*0.5);
+    dummy.scale.set(f.s,f.s,f.s);dummy.updateMatrix();
+    wall.setMatrixAt(f.i,dummy.matrix);
+  }
+  wall.instanceMatrix.needsUpdate=true;
+  /* pulses */
+  pulseTimer-=dt;
+  if(pulseTimer<=0){pulses.push({i:NP_START+Math.floor(Math.random()*(NP_END-NP_START)),t:0});pulseTimer=rand(0.05,0.2);}
+  for(let p=pulses.length-1;p>=0;p--){
+    const pu=pulses[p];pu.t+=dt*1.7;
+    if(pu.t>=1){wall.setColorAt(pu.i,tmpC.setHex(baseCol[pu.i]));pulses.splice(p,1);continue;}
+    const k=Math.sin(pu.t*Math.PI);
+    wall.setColorAt(pu.i,tmpC.setHex(baseCol[pu.i]).lerp(cFlash,k*0.9));
+  }
+  if(wall.instanceColor)wall.instanceColor.needsUpdate=true;
+  /* dust */
+  for(let i=0;i<pCount;i++){pPos[i*3+1]+=pSpd[i]*dt;if(pPos[i*3+1]>22)pPos[i*3+1]=0;}
+  pGeo.attributes.position.needsUpdate=true;
+  renderer.render(scene,camera);
+}
+frame();
+})();
+</script>

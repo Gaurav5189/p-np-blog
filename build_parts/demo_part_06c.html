@@ -1,0 +1,487 @@
+<script>
+/* ============================================================
+   01 — VERIFY VS SOLVE · Hamiltonian cycle on 2D canvas
+   ============================================================ */
+(function hc(){
+const canvas=$('#hc-canvas');if(!canvas)return;
+const ctx=canvas.getContext('2d');
+let n=10,nodes=[],edges=[],cycle=[],cycleSet={},adj=[];
+let anim=null,mode='idle',pathEdges=[],certFlash=[],failFlash=[];
+const TEAL='#3ddbb0',GOLD='#f0b13e',EMBER='#ff6a3d',DANGER='#e5484d',INK='rgba(236,230,216,';
+
+/* silent DFS: measures how hard a candidate graph is (deterministic, start=0) */
+function silentSteps(ed,ad,cap){
+  let steps=0;
+  const path=[0];const used=new Array(n).fill(false);used[0]=true;
+  const cand=new Array(n+2).fill(0);
+  function edgeId(a,b){for(let i=0;i<ed.length;i++){const p=ed[i][0],q=ed[i][1];if((p===a&&q===b)||(p===b&&q===a))return i;}return -1;}
+  while(path.length){
+    steps++;
+    if(steps>cap)return cap+1;
+    if(path.length===n){
+      if(edgeId(path[n-1],0)>=0)return steps;
+      used[path.pop()]=false;cand[path.length+1]=0;continue;
+    }
+    const last=path[path.length-1],d=path.length;
+    let nb=null;
+    while(cand[d]<ad[last].length){const c=ad[last][cand[d]++];if(!used[c.to]){nb=c;break;}}
+    if(nb){used[nb.to]=true;path.push(nb.to);}
+    else{
+      if(path.length<=1)return steps;
+      used[path.pop()]=false;cand[path.length+1]=0;
+    }
+  }
+  return steps;
+}
+function build(){
+  n=+$('#hc-n').value;
+  nodes=[];const W=canvas.logicalW||canvas.clientWidth||900,H=canvas.logicalH||420;
+  const cx=W/2,cy=H/2,R=Math.min(W,H)*0.38;
+  /* generate 40 candidate graphs, ship the one whose exhaustive search is hardest.
+     adjacency is ordered adversarially: extra (misleading) edges first, cycle edges last */
+  let bestE=null,bestA=null,bestC=null,bestS=-1;
+  const cap=50000;
+  for(let t=0;t<40;t++){
+    const perm=[...Array(n).keys()];
+    for(let i=n-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[perm[i],perm[j]]=[perm[j],perm[i]];}
+    const cyc=[],cset={};
+    for(let i=0;i<n;i++){const a=perm[i],b=perm[(i+1)%n];cyc.push([a,b]);cset[a+'-'+b]=cset[b+'-'+a]=true;}
+    const ed=[...cyc];
+    const extra=Math.round(n*0.5);
+    let guard=0;
+    while(ed.length<n+extra&&guard++<500){
+      const a=Math.floor(Math.random()*n),b=Math.floor(Math.random()*n);
+      if(a!==b&&!cset[a+'-'+b]&&!ed.some(([p,q])=>(p===a&&q===b)||(p===b&&q===a)))ed.push([a,b]);
+    }
+    const ad=Array.from({length:n},()=>[]);
+    ed.forEach(([a,b],i)=>{if(i>=n){ad[a].push({to:b,ei:i});ad[b].push({to:a,ei:i});}});
+    ed.forEach(([a,b],i)=>{if(i<n){ad[a].push({to:b,ei:i});ad[b].push({to:a,ei:i});}});
+    const s=silentSteps(ed,ad,cap);
+    if(s>bestS){bestS=s;bestE=ed;bestA=ad;bestC=cyc;}
+    if(bestS>cap)break;
+  }
+  edges=bestE;adj=bestA;cycle=bestC;
+  for(let i=0;i<n;i++){
+    const ang=(i/n)*TAU-Math.PI/2+rand(-0.14,0.14);
+    nodes[i]={x:cx+Math.cos(ang)*R*rand(0.86,1.14),y:cy+Math.sin(ang)*R*rand(0.8,1.2)};
+  }
+  mode='idle';pathEdges=[];certFlash=[];failFlash=[];
+  $('#hc-stat-verify').textContent='—';
+  $('#hc-stat-steps').textContent='0';
+  $('#hc-stat-explored').textContent='0%';
+  draw();
+}
+function setSize(){
+  const DPR=Math.min(devicePixelRatio||1,2);
+  const w=canvas.clientWidth||canvas.parentElement.clientWidth;
+  const h=+canvas.getAttribute('height');
+  canvas.width=w*DPR;canvas.height=h*DPR;canvas.style.height=h+'px';
+  ctx.setTransform(DPR,0,0,DPR,0,0);
+  canvas.logicalW=w;canvas.logicalH=h;
+}
+function draw(){
+  const W=canvas.logicalW,H=canvas.logicalH;
+  ctx.clearRect(0,0,W,H);
+  /* faint grid */
+  ctx.strokeStyle='rgba(236,230,216,0.03)';ctx.lineWidth=1;
+  for(let x=0;x<W;x+=44){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,H);ctx.stroke();}
+  for(let y=0;y<H;y+=44){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(W,y);ctx.stroke();}
+  /* edges */
+  edges.forEach(([a,b],i)=>{
+    const isPath=pathEdges.includes(i),isCert=certFlash.includes(i),isFail=failFlash.includes(i);
+    ctx.strokeStyle=isCert?TEAL:isPath?GOLD:isFail?DANGER:INK+'0.14)';
+    ctx.lineWidth=isCert?3:isPath?2.4:isFail?2:1;
+    ctx.shadowBlur=isCert||isPath||isFail?14:0;
+    ctx.shadowColor=isCert?TEAL:isPath?GOLD:DANGER;
+    ctx.beginPath();ctx.moveTo(nodes[a].x,nodes[a].y);ctx.lineTo(nodes[b].x,nodes[b].y);ctx.stroke();
+    ctx.shadowBlur=0;
+  });
+  /* nodes */
+  nodes.forEach((nd,i)=>{
+    ctx.beginPath();ctx.arc(nd.x,nd.y,9,0,TAU);
+    ctx.fillStyle='#0c0a10';ctx.fill();
+    ctx.strokeStyle=INK+'0.5)';ctx.lineWidth=1.4;ctx.stroke();
+    ctx.beginPath();ctx.arc(nd.x,nd.y,3.4,0,TAU);
+    ctx.fillStyle=GOLD;ctx.shadowBlur=10;ctx.shadowColor=GOLD;ctx.fill();ctx.shadowBlur=0;
+    ctx.fillStyle=INK+'0.75)';ctx.font=CANVAS_FONT(10);ctx.textAlign='center';
+    ctx.fillText(i,nd.x,nd.y-16);
+  });
+  /* caption */
+  ctx.fillStyle=INK+'0.4)';ctx.font=CANVAS_FONT(10.5);ctx.textAlign='left';
+  const msg=mode==='solving'?'exhaustive DFS + backtracking — searching n! candidates'
+    :mode==='verified'?'certificate accepted — O(n) verification'
+    :mode==='failed'?'search budget exhausted — this is the wall'
+    :mode==='found'?'cycle found — compare the two counters':'idle — hidden Hamiltonian cycle loaded';
+  ctx.fillText('◈ '+msg,16,H-14);
+}
+function stopAnim(){if(anim){clearInterval(anim);anim=null;}}
+
+$('#hc-n').addEventListener('input',e=>{$('#hc-n-out').textContent=e.target.value;build();});
+$('#hc-regen').addEventListener('click',build);
+$('#hc-stop').addEventListener('click',()=>{stopAnim();mode='idle';draw();});
+$('#hc-verify').addEventListener('click',()=>{
+  stopAnim();resetStats();
+  mode='verified';pathEdges=[];certFlash=[];failFlash=[];
+  let k=0;
+  anim=setInterval(()=>{
+    if(k<cycle.length){
+      const [a,b]=cycle[k];
+      certFlash.push(edges.findIndex(([p,q])=>(p===a&&q===b)||(p===b&&q===a)));
+      k++;
+      $('#hc-stat-verify').textContent=k+' / '+n+' steps';
+    }else{stopAnim();}
+    draw();
+  },90);
+});
+function resetStats(){stopAnim();$('#hc-stat-steps').textContent='0';$('#hc-stat-explored').textContent='0%';$('#hc-stat-verify').textContent='—';}
+$('#hc-solve').addEventListener('click',()=>{
+  stopAnim();resetStats();
+  mode='solving';
+  let steps=0,backtracks=0,found=false;
+  let path=[0];const used=new Array(n).fill(false);used[0]=true;
+  const cand=Array.from({length:n+1},()=>0);
+  pathEdges=[];certFlash=[];failFlash=[];
+  const cap=400000;
+  const space=factBig(n);
+  const speed=n<=9?3:n<=11?14:n<=12?70:260;
+  function edgeId(a,b){return edges.findIndex(([p,q])=>(p===a&&q===b)||(p===b&&q===a));}
+  anim=setInterval(()=>{
+    let local=0;
+    while(local<speed&&steps<cap){
+      local++;steps++;
+      if(path.length===n){
+        const ei=edgeId(path[n-1],0);
+        if(ei>=0){found=true;pathEdges=[ei];break;}
+        failFlash=[edgeId(path[n-2],path[n-1])];used[path.pop()]=false;cand[path.length+1]=0;backtracks++;
+        setTimeout(((id)=>()=>{failFlash=failFlash.filter(x=>x!==id);})(failFlash[0]),160);
+        continue;
+      }
+      const last=path[path.length-1],d=path.length;
+      let nb=null;
+      while(cand[d]<adj[last].length){const c=adj[last][cand[d]++];if(!used[c.to]){nb=c;break;}}
+      if(nb){used[nb.to]=true;path.push(nb.to);pathEdges.push(nb.ei);}
+      else{
+        if(path.length<=1)break;
+        used[path.pop()]=false;cand[path.length+1]=0;backtracks++;
+        const bad=pathEdges.pop();
+        if(bad!==undefined){failFlash.push(bad);const id=bad;setTimeout(()=>{failFlash=failFlash.filter(x=>x!==id);},160);}
+      }
+      if(path.length<n&&pathEdges.length>=path.length)pathEdges=pathEdges.slice(0,Math.max(0,path.length-1));
+    }
+    $('#hc-stat-steps').textContent=steps.toLocaleString();
+    $('#hc-stat-explored').textContent=explPct(steps,space);
+    if(found){stopAnim();mode='found';
+      $('#hc-stat-verify').textContent=n+' steps (O(n))';
+    }
+    if(steps>=cap&&!found){stopAnim();mode='failed';pathEdges=[];}
+    draw();
+  },40);
+});
+function factBig(k){let log10=0;for(let i=2;i<=k;i++)log10+=Math.log10(i);return log10;}
+function explPct(steps,log10space){return (Math.log10(Math.max(1,steps))-log10space<-16?'<1×10⁻¹⁶':Math.pow(10,Math.log10(Math.max(1,steps))-log10space).toExponential(1))+'%';}
+function updSpace(){$('#hc-stat-space').textContent=n+'! = '+(Math.pow(10,factBig(n))).toExponential(1).replace('e+','×10^') ;}
+$('#hc-n').addEventListener('input',updSpace);updSpace();
+new ResizeObserver(()=>{setSize();draw();}).observe(canvas);
+setSize();build();
+})();
+
+/* ============================================================
+   03 — SAT LAB · live DPLL across the phase transition
+   ============================================================ */
+(function sat(){
+const canvas=$('#sat-canvas');if(!canvas)return;
+const ctx=canvas.getContext('2d');
+let results=[],running=false,startA=2.0,elapsed=0,peakB=0,satCount=0,totalCount=0,curPulse=0;
+const CAP=40000;
+
+function genSAT(nv,m){
+  const cls=[];
+  for(let i=0;i<m;i++){
+    const vs=[];while(vs.length<3){const v=1+Math.floor(Math.random()*nv);if(!vs.includes(v))vs.push(v);}
+    cls.push(vs.map(v=>Math.random()<0.5?v:-v));
+  }
+  return cls;
+}
+function reduce(cls,lit){
+  const out=[];
+  for(let i=0;i<cls.length;i++){
+    const c=cls[i];
+    if(c.indexOf(lit)>=0)continue;
+    const nc=[];
+    for(let j=0;j<c.length;j++)if(c[j]!==-lit)nc.push(c[j]);
+    if(nc.length===0)return 'EMPTY';
+    out.push(nc);
+  }
+  return out;
+}
+/* DPLL + unit propagation — the "engineered" solver */
+function dpllUP(cls,nv,stats){
+  stats.nodes++;
+  if(stats.nodes>CAP)throw 'CAP';
+  let found=true;
+  while(found){
+    found=false;
+    for(let i=0;i<cls.length;i++){
+      if(cls[i].length===0)return false;
+      if(cls[i].length===1){cls=reduce(cls,cls[i][0]);found=true;if(cls==='EMPTY')return false;break;}
+    }
+  }
+  if(cls.length===0)return true;
+  const lit=cls[0][0];
+  const r1=reduce(cls,lit);
+  const a1=r1==='EMPTY'?false:dpllUP(r1,nv,stats);
+  if(a1)return true;
+  const r2=reduce(cls,-lit);
+  return r2==='EMPTY'?false:dpllUP(r2,nv,stats);
+}
+/* blind backtracking — the raw search the wall is made of */
+function dpllBlind(cls,nv,stats){
+  stats.nodes++;
+  if(stats.nodes>CAP)throw 'CAP';
+  if(cls.length===0)return true;
+  const lit=cls[0][0];
+  const r1=reduce(cls,lit);
+  const a1=r1==='EMPTY'?false:dpllBlind(r1,nv,stats);
+  if(a1)return true;
+  const r2=reduce(cls,-lit);
+  return r2==='EMPTY'?false:dpllBlind(r2,nv,stats);
+}
+function runSweep(){
+  if(running)return;
+  running=true;results=[];elapsed=0;peakB=0;satCount=0;totalCount=0;
+  const nv=+$('#sat-n').value,trials=+$('#sat-trials').value;
+  startA=+$('#sat-alpha').value/10;
+  const alphas=[];for(let a=startA;a<=6.001;a+=0.25)alphas.push(+a.toFixed(2));
+  const t0=performance.now();
+  let ai=0;
+  (function step(){
+    if(ai>=alphas.length){running=false;draw();return;}
+    const alpha=alphas[ai],m=Math.round(alpha*nv);
+    let sumU=0,sumB=0,mxB=0,sat=0;
+    for(let k=0;k<trials;k++){
+      const cls=genSAT(nv,m);
+      const sU={nodes:0},sB={nodes:0};
+      try{if(dpllUP(cls.map(c=>c.slice()),nv,sU))sat++;}catch(e){}
+      try{dpllBlind(cls.map(c=>c.slice()),nv,sB);}catch(e){}
+      sumU+=Math.min(sU.nodes,CAP);sumB+=Math.min(sB.nodes,CAP);
+      mxB=Math.max(mxB,Math.min(sB.nodes,CAP));
+    }
+    results.push({alpha,meanU:sumU/trials,meanB:sumB/trials,sat:sat/trials});
+    peakB=Math.max(peakB,mxB);satCount+=sat;totalCount+=trials;
+    ai++;
+    elapsed=(performance.now()-t0)/1000;
+    $('#sat-stat-cur').textContent='α='+alpha.toFixed(2);
+    $('#sat-stat-up').textContent=fmtN(sumU/trials);
+    $('#sat-stat-sat').textContent=Math.round(100*satCount/totalCount)+'%';
+    $('#sat-stat-peak').textContent=fmtN(peakB);
+    $('#sat-stat-time').textContent=elapsed.toFixed(1)+'s';
+    draw();
+    setTimeout(()=>requestAnimationFrame(step),200);
+  })();
+}
+function fmtN(v){return v>=1e6?(v/1e6).toFixed(1)+'M':v>=1000?(v/1000).toFixed(1)+'k':Math.round(v).toString();}
+function setSize(){
+  const DPR=Math.min(devicePixelRatio||1,2);
+  const w=canvas.clientWidth||canvas.parentElement.clientWidth,h=+canvas.getAttribute('height');
+  canvas.width=w*DPR;canvas.height=h*DPR;canvas.style.height=h+'px';
+  ctx.setTransform(DPR,0,0,DPR,0,0);canvas.logicalW=w;canvas.logicalH=h;
+}
+function draw(){
+  const W=canvas.logicalW,H=canvas.logicalH;
+  ctx.clearRect(0,0,W,H);
+  const L=56,R=18,T=40,B=40,pw=W-L-R,ph=H-T-B;
+  const a0=startA-0.05,a1=6.05;
+  const lmax=4.7,lmin=0;
+  const X=a=>L+((a-a0)/(a1-a0))*pw;
+  const Y=v=>T+ph-((Math.log10(Math.max(1,v))-lmin)/(lmax-lmin))*ph;
+  /* grid */
+  ctx.strokeStyle='rgba(236,230,216,0.06)';ctx.lineWidth=1;ctx.font=CANVAS_FONT(9.5);ctx.fillStyle='rgba(236,230,216,0.4)';ctx.textAlign='right';
+  for(let lv=0;lv<=4;lv++){
+    const y=T+ph-(lv/4.7)*ph;
+    ctx.beginPath();ctx.moveTo(L,y);ctx.lineTo(W-R,y);ctx.stroke();
+    ctx.fillText(['1','10','100','1k','10k',''][lv],L-8,y+3);
+  }
+  ctx.textAlign='left';
+  for(let a=Math.ceil(a0);a<=6;a++){
+    ctx.beginPath();ctx.moveTo(X(a),T);ctx.lineTo(X(a),T+ph);ctx.stroke();
+    ctx.fillText(a.toFixed(1),X(a)-6,H-B+16);
+  }
+  ctx.textAlign='center';
+  ctx.fillText('clause-to-variable ratio α',L+pw/2-46,H-8);
+  ctx.save();ctx.translate(12,T+ph/2+40);ctx.rotate(-Math.PI/2);ctx.fillText('DPLL nodes · log scale',0,0);ctx.restore();
+  /* phase shading */
+  ctx.fillStyle='rgba(61,219,176,0.045)';
+  ctx.fillRect(L,T,Math.max(0,X(Math.min(4.267,a1))-L),ph);
+  ctx.fillStyle='rgba(255,106,61,0.045)';
+  ctx.fillRect(X(Math.max(4.267,a0)),T,Math.max(0,W-R-X(Math.max(4.267,a0))),ph);
+  /* critical line */
+  if(4.267>a0&&4.267<a1){
+    ctx.setLineDash([5,5]);ctx.strokeStyle='rgba(240,177,62,0.65)';ctx.lineWidth=1.2;
+    ctx.beginPath();ctx.moveTo(X(4.267),T);ctx.lineTo(X(4.267),T+ph);ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.fillStyle='rgba(240,177,62,0.9)';ctx.font=CANVAS_FONT(10);
+    ctx.fillText('α_c ≈ 4.267',X(4.267),T-22);
+  }
+  /* legend */
+  ctx.font=CANVAS_FONT(10);
+  ctx.fillStyle='#ff6a3d';ctx.beginPath();ctx.arc(L+pw-244,T-12,3.4,0,TAU);ctx.fill();
+  ctx.fillStyle='rgba(236,230,216,0.6)';ctx.textAlign='left';ctx.fillText('blind backtracking',L+pw-234,T-8);
+  ctx.fillStyle='#3ddbb0';ctx.beginPath();ctx.arc(L+pw-110,T-12,3.4,0,TAU);ctx.fill();
+  ctx.fillStyle='rgba(236,230,216,0.6)';ctx.fillText('+ unit propagation',L+pw-100,T-8);
+  /* curves */
+  if(results.length>1){
+    ctx.strokeStyle='rgba(255,106,61,0.55)';ctx.lineWidth=1.6;ctx.beginPath();
+    results.forEach((r,i)=>{const x=X(r.alpha),y=Y(r.meanB);i?ctx.lineTo(x,y):ctx.moveTo(x,y);});
+    ctx.stroke();
+    ctx.strokeStyle='rgba(61,219,176,0.7)';ctx.beginPath();
+    results.forEach((r,i)=>{const x=X(r.alpha),y=Y(r.meanU);i?ctx.lineTo(x,y):ctx.moveTo(x,y);});
+    ctx.stroke();
+  }
+  /* points */
+  results.forEach((r,i)=>{
+    const x=X(r.alpha);
+    const yB=Y(r.meanB),yU=Y(r.meanU);
+    ctx.beginPath();ctx.arc(x,yB,3.2,0,TAU);ctx.fillStyle='#ff6a3d';ctx.shadowBlur=9;ctx.shadowColor='#ff6a3d';ctx.fill();ctx.shadowBlur=0;
+    ctx.beginPath();ctx.arc(x,yU,3.2,0,TAU);ctx.fillStyle='#3ddbb0';ctx.shadowBlur=9;ctx.shadowColor='#3ddbb0';ctx.fill();ctx.shadowBlur=0;
+    if(i===results.length-1&&running){
+      curPulse+=0.05;
+      ctx.beginPath();ctx.arc(x,yB,6+6*(1-Math.abs(Math.sin(curPulse))),0,TAU);
+      ctx.strokeStyle='rgba(240,177,62,0.8)';ctx.lineWidth=1.5;ctx.stroke();
+    }
+  });
+  if(!results.length){
+    ctx.fillStyle='rgba(236,230,216,0.35)';ctx.font=CANVAS_FONT(12);ctx.textAlign='center';
+    ctx.fillText('press ▶ RUN EXPERIMENT — 20 fresh random formulas per point, two solvers head-to-head',W/2,H/2);
+  }
+}
+$('#sat-run').addEventListener('click',runSweep);
+[['sat-n','sat-n-out',v=>v],['sat-trials','sat-trials-out',v=>v],['sat-alpha','sat-alpha-out',v=>(v/10).toFixed(1)+' → 6.0']]
+.forEach(([id,out,f])=>{
+  const el=$('#'+id);
+  el.addEventListener('input',()=>{$('#'+out).textContent=f(el.value);draw();});
+});
+new ResizeObserver(()=>{setSize();draw();}).observe(canvas);
+setSize();draw();
+})();
+
+
+/* ============================================================
+   05 — FIVE WORLDS
+   ============================================================ */
+(function worlds(){
+const stage=$('#w-slider');if(!stage)return;
+const WORLDS=[
+ {name:'Algorithmica',color:'#3ddbb0',roman:'I',
+  sky:'radial-gradient(ellipse 100% 85% at 50% 0%, rgba(61,219,176,.16), transparent 62%)',
+  desc:'P = NP (or morally equivalent: fast randomized algorithms for NP). Nothing survives — all computational assumptions false; key recovery, preimages, collisions all polynomial-time.',
+  art:{'one-way functions':0,'symmetric crypto':0,'digital signatures':0,'public-key crypto':0,'key exchange':0,'blockchain / PoW':0,'zero-knowledge':0}},
+ {name:'Heuristica',color:'#f0b13e',roman:'II',
+  sky:'radial-gradient(ellipse 100% 85% at 50% 0%, rgba(240,177,62,.16), transparent 62%)',
+  desc:'NP problems hard worst-case, easy on average. Cryptography becomes unreliable — security depends on the input distribution; no provable guarantees.',
+  art:{'one-way functions':0.4,'symmetric crypto':0.4,'digital signatures':0.3,'public-key crypto':0.15,'key exchange':0.15,'blockchain / PoW':0.3,'zero-knowledge':0.2}},
+ {name:'Pessiland',color:'#ff6a3d',roman:'III',
+  sky:'radial-gradient(ellipse 100% 85% at 50% 0%, rgba(255,106,61,.16), transparent 62%)',
+  desc:'Average-case hard NP problems exist, but no one-way functions. The worst world: hardness is real yet yields no cryptographic advantage.',
+  art:{'one-way functions':0,'symmetric crypto':0.2,'digital signatures':0,'public-key crypto':0,'key exchange':0,'blockchain / PoW':0,'zero-knowledge':0.1}},
+ {name:'Minicrypt',color:'#e5a3d6',roman:'IV',
+  sky:'radial-gradient(ellipse 100% 85% at 50% 0%, rgba(229,163,214,.14), transparent 62%)',
+  desc:'One-way functions exist, but no public-key cryptography. Symmetric crypto, hashing, and shared-key signatures survive; no key exchange, no public-key encryption.',
+  art:{'one-way functions':1,'symmetric crypto':1,'digital signatures':1,'public-key crypto':0,'key exchange':0,'blockchain / PoW':0.5,'zero-knowledge':0.6}},
+ {name:'Cryptomania',color:'#3ddbb0',roman:'V',
+  sky:'radial-gradient(ellipse 100% 85% at 50% 0%, rgba(61,219,176,.2), transparent 62%)',
+  desc:'Public-key cryptography exists — key agreement, trapdoors. Everything survives: secure multi-party computation, electronic cash, the current Internet\u2019s trust model.',
+  art:{'one-way functions':1,'symmetric crypto':1,'digital signatures':1,'public-key crypto':1,'key exchange':1,'blockchain / PoW':1,'zero-knowledge':1}}
+];
+const stops=$('#w-stops'),slider=$('#w-slider');
+WORLDS.forEach((W,i)=>{
+  const s=document.createElement('button');
+  s.className='wstop';s.setAttribute('role','tab');s.setAttribute('aria-label',W.name);
+  s.innerHTML='<span class="lbl">'+W.name+'</span>';
+  s.addEventListener('click',()=>go(i));
+  stops.appendChild(s);
+});
+function go(i){
+  const W=WORLDS[i];
+  slider.value=i;
+  $$('.wstop',stops).forEach((s,k)=>s.classList.toggle('active',k===i));
+  $('#w-eyebrow').textContent='WORLD '+W.roman+' OF V';
+  const nm=$('#w-name');nm.textContent=W.name;nm.style.color=W.color;
+  $('#w-desc').textContent=W.desc;
+  $('#worlds-sky').style.background=W.sky;
+  const box=$('#w-artifacts');box.innerHTML='';
+  Object.entries(W.art).forEach(([k,v],j)=>{
+    const el=document.createElement('span');
+    el.className='artifact'+(v>=0.75?'':v>=0.25?' weak':' dead');
+    el.innerHTML='<span class="led" style="background:'+(v>=0.75?'var(--teal)':v>=0.25?'var(--gold)':'var(--danger)')+';box-shadow:0 0 8px currentColor"></span>'+k+(v>0&&v<0.75?' ?':'');
+    el.style.transitionDelay=(j*40)+'ms';
+    box.appendChild(el);
+  });
+}
+slider.addEventListener('input',e=>go(+e.target.value));
+go(0);
+})();
+
+/* ============================================================
+   06 — COLLAPSE SIMULATOR
+   ============================================================ */
+(function collapse(){
+if(!$('#col-c'))return;
+const AGE=1.38e10;
+function fmtTime(s){
+  if(s<1e-6)return 'sub-microsecond';
+  if(s<1)return Math.round(s*1000)+' ms';
+  if(s<60)return s.toFixed(1)+' seconds';
+  if(s<3600)return (s/60).toFixed(1)+' minutes';
+  if(s<86400)return (s/3600).toFixed(1)+' hours';
+  if(s<3.156e7)return (s/86400).toFixed(1)+' days';
+  if(s<3.156e10)return (s/3.156e7).toFixed(1)+' years';
+  const y=s/3.156e7;
+  return y.toExponential(1).replace('e+','×10^')+' years ≈ '+(y/AGE).toExponential(1).replace('e+','×10^')+' × age of universe';
+}
+function update(){
+  const c=+$('#col-c').value,k=+$('#col-k').value;
+  $('#col-c-out').textContent=c;$('#col-k').value=k;
+  $('#col-k-out').textContent=k+'×';
+  const N=1e6,ops=k*Math.pow(N,c),secs=ops/1e12;
+  $('#col-time').textContent=fmtTime(secs);
+  let band,label,color,sub,openssl,hits;
+  if(secs<86400){band='cat';label='Catastrophic — game over';color='var(--danger)';
+    sub='An O(N²)-class solver with real constants. The article\u2019s verdict: “disastrous” — the entire deployed cryptosystem stack is gone within months.';
+    openssl='gone within weeks';hits=3;}
+  else if(secs<3.156e7*30){band='sev';label='Severe — triage mode';color='var(--ember)';
+    sub='Slow but real. defenses migrate down the stack while teams race the exponent: short-lived keys, ephemeral sessions, minimal instances (Layer 4).';
+    openssl='months to a few years';hits=3;}
+  else if(secs<3.156e7*1e6){band='con';label='Contained — decades bought';color='var(--gold)';
+    sub='The “useless algorithm” border. Like early poly-time LP and primality algorithms, exponents fall over time — the window is measured in decades, not forever.';
+    openssl='decades of exponent arbitrage';hits=2;}
+  else{band='safe';label='Practically safe — marker of ignorance';color='var(--teal)';
+    sub='P = NP holds with an exponent no machine can exploit (Knuth\u2019s non-constructive scenario, Levin\u2019s universal search as the only “algorithm”). Truth without consequence.';
+    openssl='indefinite — arbitrage holds';hits=0;}
+  $('#col-main').textContent=label;$('#col-main').style.color=color;
+  $('#col-verdict').style.borderColor=color;$('#col-verdict').style.boxShadow='0 0 40px '+(band==='cat'?'rgba(229,72,77,.12)':band==='safe'?'rgba(61,219,176,.08)':'rgba(255,106,61,.08)');
+  $('#col-sub').textContent=sub;
+  $('#col-openssl').textContent=openssl;
+  $$('#cascade .cas').forEach((el,i)=>{
+    el.classList.toggle('hit',i<hits);
+    el.classList.toggle('safe',i>=hits);
+    el.querySelector('.bar').style.width=i<hits?(band==='cat'?'100%':band==='sev'?'70%':'30%'):'0';
+  });
+}
+$('#col-c').addEventListener('input',update);
+$('#col-k').addEventListener('input',update);
+update();
+})();
+
+/* ============================================================
+   07 — DEFENSE STACK accordions
+   ============================================================ */
+$$('.layer-btn').forEach(btn=>{
+  btn.addEventListener('click',()=>{
+    const layer=btn.parentElement,body=layer.querySelector('.layer-body');
+    const open=layer.classList.toggle('open');
+    btn.setAttribute('aria-expanded',open);
+    body.style.maxHeight=open?body.scrollHeight+'px':'0';
+    $$('.layer').forEach(l=>{if(l!==layer){l.classList.remove('open');l.querySelector('.layer-btn').setAttribute('aria-expanded','false');l.querySelector('.layer-body').style.maxHeight='0';}});
+  });
+});
+</script>

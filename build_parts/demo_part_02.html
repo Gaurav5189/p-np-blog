@@ -1,0 +1,103 @@
+<body>
+<div id="preloader" role="status" aria-label="Loading">
+  <div class="pre-mark"><span class="p">P</span><span class="neq">≠</span><span class="np">NP</span></div>
+  <div class="pre-bar"><i></i></div>
+  <div class="pre-tag">erecting the wall…</div>
+</div>
+<div class="grain" aria-hidden="true"></div>
+<div class="vignette" aria-hidden="true"></div>
+<div id="readbar" aria-hidden="true"></div>
+
+<nav class="top" id="topnav" aria-label="Primary">
+  <a class="brand" href="#hero" aria-label="P vs NP journal — back to top">
+    <span class="brand-glyph">≠</span>
+    <span>
+      <span class="brand-name">The Fifty-Year Wall</span>
+      <span class="brand-sub">P vs NP · research journal</span>
+    </span>
+  </a>
+  <div class="nav-links">
+    <a href="#asymmetry">Asymmetry</a>
+    <a href="#barriers">Barriers</a>
+    <a href="#satlab">SAT Lab</a>
+    <a href="#web">Reductions</a>
+    <a href="#worlds">Five Worlds</a>
+    <a href="#collapse">Collapse</a>
+    <a href="#defense">Defense</a>
+    <a href="#article" class="hot">Read the Paper</a>
+    <a href="#article" class="nav-cta">$1M Question</a>
+  </div>
+</nav>
+
+<div class="page-wrap">
+<main>
+
+<!-- ================= HERO ================= -->
+<section id="hero" aria-label="Introduction">
+  <canvas id="hero-canvas" aria-label="Interactive 3D wall separating orderly P structure from chaotic NP tower. Drag to orbit."></canvas>
+  <div class="hero-grad" aria-hidden="true"></div>
+  <div class="hero-inner">
+    <div class="shell">
+      <div class="hero-kicker">
+        <span class="chip"><span class="dot"></span> Millennium Prize Problem · <b>$1,000,000</b></span>
+        <span class="chip">est. <b>1971</b> · Cook / Levin</span>
+        <span class="chip"><b>3,000+</b> NP-complete problems</span>
+      </div>
+      <h1 class="hero-title"><span class="p">P</span><span class="neq">≠</span><span class="np">NP</span><span class="qm">?</span></h1>
+      <p class="hero-sub"><strong>The Fifty-Year Wall</strong> — an interactive research journal on the deepest open question in computer science. Why we can't prove it, what fine-grained complexity salvaged, where cryptography stands, and what survives if the wall ever falls.</p>
+      <div class="hero-actions">
+        <a class="btn primary" href="#asymmetry">Enter the asymmetry
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M12 5v14m0 0l-6-6m6 6l6-6"/></svg>
+        </a>
+        <a class="btn" href="#article">Read the research</a>
+        <a class="btn ghost" href="#barriers">The three barriers</a>
+      </div>
+      <div class="hero-stats">
+        <span class="chip"><b>5n−o(n)</b> · best known circuit lower bound</span>
+        <span class="chip"><b>2ⁿ/n</b> · Shannon's counting truth</span>
+        <span class="chip"><b>3</b> proof barriers stand</span>
+      </div>
+    </div>
+  </div>
+  <div class="scroll-cue" aria-hidden="true">SCROLL<i></i></div>
+  <div class="hero-hint" aria-hidden="true">drag to orbit · scroll to approach the wall</div>
+</section>
+
+<!-- ================= 01 VERIFY VS SOLVE ================= -->
+<section class="block" id="asymmetry" aria-label="The verify-solve asymmetry">
+  <div class="shell">
+    <div class="section-head">
+      <span class="kicker"><span class="idx">01</span> The Core Asymmetry</span>
+      <h2 class="title rv">Checking is cheap.<br><em>Finding</em> is the wall.</h2>
+      <p class="lede rv d1">NP is the class of problems whose <strong>yes-answers come with short certificates</strong>. Below is a graph hiding a Hamiltonian cycle — a loop visiting every node exactly once. Handing you the cycle makes verification a walk in the park. <strong>Finding it from scratch means searching a space of n! candidates.</strong> That gap is the entire question.</p>
+    </div>
+
+    <div class="panel rv d2">
+      <div class="panel-bar">
+        <span class="pt"><span class="led"></span><b>SIM-01</b> Hamiltonian cycle · verify vs solve</span>
+        <span style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+          <div class="ctrl" style="min-width:170px">
+            <label>nodes n <output id="hc-n-out">10</output></label>
+            <input type="range" id="hc-n" min="8" max="14" value="10" aria-label="Number of nodes">
+          </div>
+          <button class="btn ghost" id="hc-regen">↻ New graph</button>
+        </span>
+      </div>
+      <canvas id="hc-canvas" class="simcanvas" height="420" aria-label="Graph with hidden Hamiltonian cycle"></canvas>
+      <div class="panel-body">
+        <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px">
+          <button class="btn teal" id="hc-verify">✓ Verify certificate</button>
+          <button class="btn ember" id="hc-solve">⛏ Solve from scratch</button>
+          <button class="btn ghost" id="hc-stop">■ Stop</button>
+        </div>
+        <div class="stat-row">
+          <div class="stat"><div class="v t" id="hc-stat-verify">—</div><div class="k">verify cost · n steps</div></div>
+          <div class="stat"><div class="v e" id="hc-stat-steps">0</div><div class="k">search steps taken</div></div>
+          <div class="stat"><div class="v g" id="hc-stat-space">10! = 3.6×10⁶</div><div class="k">search space size</div></div>
+          <div class="stat"><div class="v" id="hc-stat-explored">0%</div><div class="k">of space explored</div></div>
+        </div>
+        <p class="foot-note"><b>What to feel:</b> verification lights the certificate cycle in a handful of steps — always. The solver backtracks through partial paths; watch <b>search steps</b> climb against a space that grows factorially as you drag n upward. Real SAT solvers are far smarter than this brute force — but the <b>worst case is exponential</b>, and fifty years of effort says nobody has beaten that for NP-complete problems.</p>
+      </div>
+    </div>
+  </div>
+</section>

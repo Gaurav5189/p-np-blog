@@ -1,0 +1,105 @@
+<!-- ================= 02 THE THREE BARRIERS ================= -->
+<section class="block" id="barriers" aria-label="The three barriers" style="background:linear-gradient(180deg,transparent,rgba(240,177,62,.025) 30%,rgba(240,177,62,.025) 70%,transparent)">
+  <div class="shell">
+    <div class="section-head">
+      <span class="kicker"><span class="idx">02</span> Why we can't prove it</span>
+      <h2 class="title rv">Three walls before <em>the wall.</em></h2>
+      <p class="lede rv d1">Before anyone touches P vs NP, their proof technique must survive three veto results. Nearly the <strong>entire 20th-century complexity toolbox</strong> fails at least one. Best known circuit lower bound for an explicit NP function: <strong>5n − o(n)</strong> gates. The desert between 5n and superpolynomial has lasted fifty years.</p>
+    </div>
+
+    <div class="barrier-tabs rv d2" role="tablist" aria-label="Choose a barrier">
+      <button class="btab active" data-b="0" role="tab">I · Relativization · 1975</button>
+      <button class="btab" data-b="1" role="tab">II · Natural Proofs · 1994</button>
+      <button class="btab" data-b="2" role="tab">III · Algebrization · 2008</button>
+    </div>
+
+    <div class="barriers-wrap rv d2">
+      <canvas id="barriers-canvas" aria-label="Three floating 3D barrier monuments. Click one to inspect it."></canvas>
+      <div class="barrier-card" id="barrier-card" role="dialog" aria-label="Barrier details">
+        <button class="x" id="barrier-x" aria-label="Close">✕</button>
+        <div class="era" id="bc-era">Baker · Gill · Solovay — 1975</div>
+        <h3 id="bc-title">Relativization</h3>
+        <p id="bc-body"></p>
+        <span class="veto" id="bc-veto">vetoes: diagonalization</span>
+      </div>
+      <div class="barrier-hud">
+        <span class="tip">◈ click a monument — or use the tabs — to inspect its veto</span>
+        <span class="tip" id="barrier-legend">drag to orbit · hover to lock</span>
+      </div>
+    </div>
+
+    <div class="grid-3" style="margin-top:22px">
+      <div class="stat rv"><div class="v t">5n − o(n)</div><div class="k">best lower bound · explicit NP function (FGHK 2016)</div></div>
+      <div class="stat rv d1"><div class="v g">SIZE(nᵏ) ∀k</div><div class="k">Kannan: where the frontier actually sits — two levels above NP</div></div>
+      <div class="stat rv d2"><div class="v e">2^Ω(n)</div><div class="k">Haken 1985 · resolution refutations of PHP — solvers included</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= 03 SAT LAB ================= -->
+<section class="block" id="satlab" aria-label="SAT phase transition laboratory">
+  <div class="shell">
+    <div class="section-head">
+      <span class="kicker"><span class="idx">03</span> SAT laboratory</span>
+      <h2 class="title rv">Watch the phase transition <em>erupt.</em></h2>
+      <p class="lede rv d1">Random 3-SAT: n variables, m = α·n random clauses. For α &lt; ≈<strong>4.267</strong>, formulas are almost always satisfiable and solvers breeze through. Past the critical ratio, they are almost never satisfiable — and the cost of <em>proving</em> it explodes. This is SETH's home turf: the fine-grained refinement of P vs NP. <strong>Run a live DPLL solver</strong> across the transition.</p>
+    </div>
+
+    <div class="panel rv d2">
+      <div class="panel-bar">
+        <span class="pt"><span class="led"></span><b>SIM-02</b> DPLL · random 3-SAT · α-sweep</span>
+        <button class="btn primary" id="sat-run">▶ Run experiment</button>
+      </div>
+      <canvas id="sat-canvas" class="simcanvas" height="400" aria-label="Chart of solver cost versus clause-to-variable ratio"></canvas>
+      <div class="panel-body">
+        <div class="grid-3">
+          <div class="ctrl">
+            <label>variables n <output id="sat-n-out">24</output></label>
+            <input type="range" id="sat-n" min="12" max="26" value="24" aria-label="Variables">
+          </div>
+          <div class="ctrl">
+            <label>instances / point <output id="sat-trials-out">6</output></label>
+            <input type="range" id="sat-trials" min="2" max="14" value="6" aria-label="Instances per ratio">
+          </div>
+          <div class="ctrl">
+            <label>α sweep <output id="sat-alpha-out">2.0 → 6.0</output></label>
+            <input type="range" id="sat-alpha" min="20" max="60" value="20" aria-label="Starting ratio times ten">
+          </div>
+        </div>
+        <div class="stat-row" style="margin-top:16px">
+          <div class="stat"><div class="v g" id="sat-stat-cur">—</div><div class="k">current α</div></div>
+          <div class="stat"><div class="v t" id="sat-stat-up">—</div><div class="k">+ unit prop · mean nodes</div></div>
+          <div class="stat"><div class="v e" id="sat-stat-peak">—</div><div class="k">blind search · mean nodes</div></div>
+          <div class="stat"><div class="v" id="sat-stat-sat">—</div><div class="k">satisfiable share so far</div></div>
+          <div class="stat"><div class="v" id="sat-stat-time">0.0s</div><div class="k">compute time</div></div>
+        </div>
+        <p class="foot-note"><b>Reading the chart:</b> every point runs <b>two solvers head-to-head</b> on the same fresh random formulas. The <b>teal curve</b> (DPLL + unit propagation — the seed of modern CDCL solvers) stays near the floor. The <b>ember curve</b> (blind backtracking — the raw shape of the search space) erupts near the vertical line at <b>α ≈ 4.267</b>, the phase transition. That eruption is the exponential wall SETH formalizes — the same wall from which edit distance, OV, and dynamic-graph lower bounds inherit their quadratic price tags.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= 04 REDUCTION WEB ================= -->
+<section class="block" id="web" aria-label="Karp reduction web">
+  <div class="shell">
+    <div class="section-head">
+      <span class="kicker"><span class="idx">04</span> Karp's dominoes</span>
+      <h2 class="title rv">One question to absorb <em>them all.</em></h2>
+      <p class="lede rv d1">In 1972 Karp showed 21 classical problems polynomial-time reduce to SAT — and the web has grown to <strong>3,000+ NP-complete problems</strong>. Solve any one of them in polynomial time and <strong>every node below collapses with it</strong>. Fail one, and the whole web stands. Drag to orbit the web; click nodes.</p>
+    </div>
+
+    <div class="web-wrap rv d2">
+      <canvas id="web-canvas" aria-label="3D graph of NP-complete problems reducing into SAT. Click nodes for details."></canvas>
+      <div class="web-labels" id="web-labels" aria-hidden="true"></div>
+      <div class="web-info" id="web-info">
+        <h4 id="wi-name">SAT</h4>
+        <div class="tagline" id="wi-tag">the pivot of the web</div>
+        <p id="wi-desc">Boolean satisfiability: does an assignment exist making every clause true? Cook 1971 proved it NP-hard; Levin independently framed the same question. If SAT ∈ P, then P = NP — full stop.</p>
+      </div>
+      <div class="barrier-hud">
+        <span class="tip">◈ drag to orbit · click a node</span>
+        <span class="tip">pulses travel along reduction directions</span>
+      </div>
+    </div>
+  </div>
+</section>

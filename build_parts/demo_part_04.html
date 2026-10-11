@@ -1,0 +1,154 @@
+<!-- ================= 05 FIVE WORLDS ================= -->
+<section class="block" id="worlds" aria-label="Impagliazzo's five worlds">
+  <div class="shell">
+    <div class="section-head">
+      <span class="kicker"><span class="idx">05</span> Impagliazzo's five worlds · 1995</span>
+      <h2 class="title rv">Five futures, one <em>spectrum.</em></h2>
+      <p class="lede rv d1">P vs NP resolves only <strong>one bit</strong> of the outcome space. The cryptography-relevant structure lives in the average-case regime the question never touches. Walk the spectrum — watch which parts of the digital economy survive at each stop.</p>
+    </div>
+  </div>
+
+  <div class="shell">
+    <div class="worlds-stage rv d2">
+      <div class="worlds-sky" id="worlds-sky"></div>
+      <div class="worlds-floor" aria-hidden="true"></div>
+      <div class="worlds-inner">
+        <div class="worlds-eyebrow" id="w-eyebrow">WORLD I OF V</div>
+        <div class="worlds-name" id="w-name" style="color:var(--teal)">Algorithmica</div>
+        <p class="worlds-desc" id="w-desc">P = NP (or morally equivalent: fast randomized algorithms for NP). All computational assumptions false; key recovery, preimages, collisions all polynomial-time.</p>
+        <div class="world-artifacts" id="w-artifacts"></div>
+      </div>
+      <div class="worlds-track">
+        <div class="worlds-rail" aria-hidden="true"></div>
+        <div class="worlds-stops" id="w-stops" role="tablist" aria-label="World selector"></div>
+        <input class="worlds-slider" id="w-slider" type="range" min="0" max="4" step="1" value="0" aria-label="Travel between Impagliazzo's five worlds">
+      </div>
+    </div>
+    <p class="foot-note rv d3">Most theorists place us in <b>Cryptomania or Minicrypt</b> — nobody can prove which. P vs NP only separates Algorithmica from the other four; Pessiland is the nightmare: hardness exists but yields <b>no</b> cryptographic advantage.</p>
+  </div>
+</section>
+
+<!-- ================= 06 COLLAPSE ================= -->
+<section class="block" id="collapse" aria-label="Collapse cascade simulator" style="background:linear-gradient(180deg,transparent,rgba(229,72,77,.03) 30%,rgba(229,72,77,.03) 70%,transparent)">
+  <div class="shell">
+    <div class="section-head">
+      <span class="kicker" style="color:var(--ember)"><span class="idx">06</span> If P = NP — day zero</span>
+      <h2 class="title rv">Set the exponent. <em>Watch it fall.</em></h2>
+      <p class="lede rv d1">Suppose a constructive polynomial SAT algorithm lands tomorrow. Whether civilization collapses or merely scrambles depends <strong>entirely on c and the constants</strong> — an O(N²) solver is "disastrous," an Ω(N⁴) one "poses no immediate practical danger." Drag the exponent and price the apocalypse.</p>
+    </div>
+
+    <div class="collapse-grid">
+      <div class="panel rv d2">
+        <div class="panel-bar"><span class="pt"><span class="led" style="background:var(--ember);box-shadow:0 0 10px var(--ember)"></span><b>SIM-03</b> collapse cascade · illustrative model</span></div>
+        <div class="panel-body">
+          <div class="ctrl" style="margin-bottom:6px">
+            <label>SAT solver exponent c <output id="col-c-out">2</output></label>
+            <input type="range" id="col-c" min="2" max="100" value="2" aria-label="Exponent of the hypothetical SAT algorithm">
+          </div>
+          <div class="ctrl" style="margin-bottom:18px">
+            <label>constant overhead <output id="col-k-out">1×</output></label>
+            <input type="range" id="col-k" min="1" max="50" value="1" aria-label="Constant overhead of the algorithm">
+          </div>
+          <div class="verdict" id="col-verdict">
+            <div class="v-label">threat assessment</div>
+            <div class="v-main" id="col-main" style="color:var(--danger)">Catastrophic — game over</div>
+            <div class="v-sub" id="col-sub"></div>
+          </div>
+          <div class="stat-row" style="margin-top:16px">
+            <div class="stat"><div class="v e" id="col-time">—</div><div class="k">time to break a 10⁶-gate instance @10¹² ops/s</div></div>
+            <div class="stat"><div class="v g" id="col-openssl">—</div><div class="k">est. survival of the OpenSSL stack</div></div>
+          </div>
+          <p class="foot-note">Model: attack cost ≈ k·N^c ops on a modern SAT encoding of a 10⁶-node instance, at 10¹² ops/sec on silicon. Illustrative — but the qualitative bands match the literature's pricing: the threat scales with the <b>exponent and constants</b>, not with the truth of the theorem.</p>
+        </div>
+      </div>
+
+      <div class="panel rv d3">
+        <div class="panel-bar"><span class="pt">order of collapse · from §4.2</span></div>
+        <div class="panel-body">
+          <div class="cascade" id="cascade">
+            <div class="cas" data-day="0"><span class="bar"></span><span class="t">T+0</span><span class="n">Public-key dies — RSA, DH, ECC, Kyber, Dilithium. NIST's post-quantum migration defended against the <em>wrong</em> adversary.</span></div>
+            <div class="cas" data-day="1"><span class="bar"></span><span class="t">T+ε</span><span class="n">Hashing &amp; symmetric fall — preimages and collisions become SAT instances; AES key recovery, SHA-256, Bitcoin's proof-of-work, Lamport &amp; SPHINCS+ signatures.</span></div>
+            <div class="cas" data-day="2"><span class="bar"></span><span class="t">T+ε²</span><span class="n">Provable-security guarantees die — every IND-CPA / IND-CCA reduction quantifies over polynomial-time adversaries; in Algorithmica that class includes the honest parties.</span></div>
+            <div class="cas" data-day="3"><span class="bar"></span><span class="t">same week</span><span class="n">Optimization gets exact — TSP, scheduling, integer programming, protein-lattice folding, chip floorplanning: the entire OR canon, optimal, no heuristics.</span></div>
+            <div class="cas" data-day="4"><span class="bar"></span><span class="t">month 1</span><span class="n">Mathematics automates — ZF proof search up to 10¹² symbols; Aaronson: plausibly <em>all seven Millennium Problems</em> at once. Gödel's 1956 letter executes.</span></div>
+            <div class="cas" data-day="5"><span class="bar"></span><span class="t">survivors</span><span class="n">Chess &amp; Go optimal play (PSPACE), Nash equilibria (PPAD), #P exact counting — and P = NP does <em>not</em> imply BQP = P.</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= 07 DEFENSE STACK ================= -->
+<section class="block" id="defense" aria-label="The defense stack">
+  <div class="shell">
+    <div class="section-head">
+      <span class="kicker"><span class="idx">07</span> The world after</span>
+      <h2 class="title rv">Re-founding security <em>below mathematics.</em></h2>
+      <p class="lede rv d1">If computational assumptions fail, security must rest on things that <strong>aren't computational assumptions</strong>. Five layers survive — strongest first. The literature even anticipated the collapse: Bennett–Brassard–Breidbart showed how to reuse a one-time pad <em>"safely even if P = NP"</em> — in 1982.</p>
+    </div>
+
+    <div class="layers rv d2" id="layers">
+      <div class="layer">
+        <button class="layer-btn" aria-expanded="false"><span class="num">L1</span><span class="nm">Information-theoretic security<small>one-time pad · QKD · Wegman–Carter · Shamir</small></span><span class="chev">▾</span></button>
+        <div class="layer-body"><div class="layer-body-in">Shannon 1949: the OTP is <b>perfectly secret</b> — the proof quantifies over unbounded adversaries, so it survives P = NP by definition. Quantum key distribution anchors security in the no-cloning theorem and no-signalling, not in any conjecture: twin-field QKD over 1,000 km of fiber, the Micius satellite's 7,600 km link, device-independent QKD certified by Bell violations. Wyner wiretap codes and Shamir secret sharing complete the toolkit — and Morimae–Yamakawa (2022) built quantum commitments and signatures <b>without one-way functions</b>.</div></div>
+      </div>
+      <div class="layer">
+        <button class="layer-btn" aria-expanded="false"><span class="num">L2</span><span class="nm">Bounded-space adversaries<small>Maurer's bounded-storage model · leakage resilience</small></span><span class="chev">▾</span></button>
+        <div class="layer-body"><div class="layer-body-in">P = NP is a statement about <b>time</b>, not space. Maurer's 1992 bounded-storage model delivers oblivious transfer and key agreement from a huge public random string plus short keys — provably secure against any adversary with bounded <b>memory</b>, no computational assumption involved. The catch: the honest/adversary storage gap can never exceed quadratic, so this layer degrades as storage gets cheap.</div></div>
+      </div>
+      <div class="layer">
+        <button class="layer-btn" aria-expanded="false"><span class="num">L3</span><span class="nm">Physics-based trust<small>PUFs · enclaves · tamper resistance · air gaps</small></span><span class="chev">▾</span></button>
+        <div class="layer-body"><div class="layer-body-in">Physically unclonable functions and secure enclaves shift the trust base from mathematics to <b>manufacturing</b>. They don't make inversion impossible — but they move the attack surface from "solve a SAT instance" to "deprocess a chip or suborn a fab": a materially different, slower threat model.</div></div>
+      </div>
+      <div class="layer">
+        <button class="layer-btn" aria-expanded="false"><span class="num">L4</span><span class="nm">Exponent arbitrage &amp; frugality<small>fine-grained cryptography · short-lived keys</small></span><span class="chev">▾</span></button>
+        <div class="layer-body"><div class="layer-body-in">If the collapse algorithm is n^c with large c, protocol design becomes a race to shrink instance sizes: ephemeral sessions, minimal messages, segmentation. This is <b>triage, not security</b> — and it has a formal research program behind it: Ball–Rosen–Sabin–Vasudevan's fine-grained cryptography builds OT, key agreement and signatures whose security is an <b>exponent gap</b> (honest parties n^a, adversaries n^(a+ε)) under SETH/OV/3SUM — assumptions that never mention superpolynomial hardness.</div></div>
+      </div>
+      <div class="layer">
+        <button class="layer-btn" aria-expanded="false"><span class="num">L5</span><span class="nm">Data-at-rest &amp; doctrine<small>harvest-now-decrypt-later becomes moot</small></span><span class="chev">▾</span></button>
+        <div class="layer-body"><div class="layer-body-in">Stored ciphertexts become retroactively breakable, so long-lived secrets demand <b>OTP re-encryption or destruction</b> pre-collapse. Institutional threat models pivot from mathematics to supply chain, side channels, and insider risk — the human layer is the final layer.</div></div>
+      </div>
+    </div>
+
+    <div class="notdefend rv d3">
+      <h4>✕ what does not defend — however intuitively</h4>
+      <div class="nd">
+        <span class="pill" title="Computational, quantum-specific — P=NP-soft">post-quantum crypto (Kyber, Dilithium)</span>
+        <span class="pill" title="Polynomial time is polynomial time">bigger RSA / ECC moduli</span>
+        <span class="pill" title="2^128 key search becomes a poly-size SAT instance">longer symmetric keys</span>
+        <span class="pill" title="Preimage resistance is an NP search problem">proof-of-work</span>
+        <span class="pill" title="Built on hash preimage resistance">Merkle-tree structures</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= 08 TIMELINE ================= -->
+<section class="block" id="timeline" aria-label="Fifty years of the wall">
+  <div class="shell">
+    <div class="section-head">
+      <span class="kicker"><span class="idx">08</span> Fifty years of siege</span>
+      <h2 class="title rv">The siege, year by <em>year.</em></h2>
+    </div>
+    <div class="timeline-wrap rv d1">
+      <div class="timeline-bar" aria-hidden="true"><i style="left:2%"></i><i style="left:18%"></i><i style="left:34%"></i><i style="left:52%"></i><i style="left:70%"></i><i style="left:88%"></i></div>
+      <div class="timeline-scroll" id="tl-scroll" tabindex="0" aria-label="Scrollable timeline of P versus NP milestones">
+        <div class="tcard"><div class="yr">1955–56</div><div class="ti">Nash &amp; Gödel's letters</div><div class="de">Nash to the NSA: key computation length grows exponentially — "I cannot prove it." Gödel to von Neumann: deciding questions in K·n² time "would have consequences of the greatest magnitude."</div></div>
+        <div class="tcard"><div class="yr">1971</div><div class="ti">Cook's theorem</div><div class="de">SAT is NP-hard; the question is posed. Levin independently formulates it (published 1973).</div></div>
+        <div class="tcard"><div class="yr">1972</div><div class="ti">Karp's 21 problems</div><div class="de">Hamiltonian cycle, TSP, Clique, Subset Sum, k-Colorability — all reduce to SAT. One question absorbs them all.</div></div>
+        <div class="tcard"><div class="yr">1975</div><div class="ti">Barrier I — Relativization</div><div class="de">Baker–Gill–Solovay: oracles A and B with P^A = NP^A and P^B ≠ NP^B. Diagonalization is blind here.</div></div>
+        <div class="tcard"><div class="yr">1985</div><div class="ti">Haken + Razborov</div><div class="de">Resolution needs 2^Ω(n) clauses on pigeonhole. Razborov: clique needs n^Ω(log n) monotone gates. Hope crests.</div></div>
+        <div class="tcard"><div class="yr">1994</div><div class="ti">Barrier II — Natural Proofs</div><div class="de">Razborov–Rudich: every known lower-bound technique would, if it worked, break every PRF. Lower bounds ≈ codebreaking.</div></div>
+        <div class="tcard"><div class="yr">1995</div><div class="ti">The five worlds</div><div class="de">Impagliazzo splits the outcome space: Algorithmica, Heuristica, Pessiland, Minicrypt, Cryptomania.</div></div>
+        <div class="tcard"><div class="yr">2000</div><div class="ti">The Clay wager</div><div class="de">$1,000,000 on the answer. Fifty years on: no poly algorithm for any NP-complete problem, no superpolynomial lower bound for any explicit function.</div></div>
+        <div class="tcard"><div class="yr">2008</div><div class="ti">Barrier III — Algebrization</div><div class="de">Aaronson–Wigderson: even arithmetization-based techniques face vetoing oracle worlds. The toolbox is now formally empty.</div></div>
+        <div class="tcard"><div class="yr">2011</div><div class="ti">Williams' algorithmic method</div><div class="de">Faster Circuit-SAT for ACC⁰ ⇒ NEXP ⊄ ACC⁰ — the first new general-circuit lower bound in decades, by inverting the pipeline.</div></div>
+        <div class="tcard"><div class="yr">2015</div><div class="ti">Fine-grained harvest begins</div><div class="de">Backurs–Indyk: truly subquadratic edit distance refutes SETH. The Wagner–Fischer n² DP is conditionally optimal; quadratic walls fall like dominoes.</div></div>
+        <div class="tcard"><div class="yr">2016</div><div class="ti">5n − o(n) · fine-grained crypto</div><div class="de">Find–Golovnev–Hirsch–Kulikov push general circuit lower bounds to 5n. Ball et al. build the first cryptography priced in exponent gaps.</div></div>
+        <div class="tcard"><div class="yr">2020</div><div class="ti">Liu–Pass theorem</div><div class="de">One-way functions exist ⟺ time-bounded Kolmogorov complexity is mildly hard on average. Meta-complexity and cryptography fuse.</div></div>
+        <div class="tcard"><div class="yr">2023–24</div><div class="ti">The wall holds</div><div class="de">Ilango: SAT reduces to MCSP given a random oracle. Fine-grained sequential functions (ASIACRYPT 2024). No ε anywhere on the horizon.</div></div>
+      </div>
+    </div>
+  </div>
+</section>

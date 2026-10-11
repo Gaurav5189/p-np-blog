@@ -1,0 +1,337 @@
+<script>
+/* ============================================================
+   02 — THE THREE BARRIERS · three 3D monuments + inspector
+   ============================================================ */
+(function barriers(){
+if(!hasWebGL)return;
+const canvas=$('#barriers-canvas');if(!canvas)return;
+const renderer=makeRenderer(canvas);
+const scene=new THREE.Scene();
+scene.fog=new THREE.Fog(0x0c0a10,18,70);
+const camera=new THREE.PerspectiveCamera(45,1,0.1,120);
+scene.add(new THREE.AmbientLight(0x544734,1.0));
+const lg=new THREE.PointLight(0xf0b13e,1.1,50);lg.position.set(0,12,10);scene.add(lg);
+const lt=new THREE.PointLight(0x3ddbb0,0.8,50);lt.position.set(-14,8,6);scene.add(lt);
+const le=new THREE.PointLight(0xff6a3d,0.8,50);le.position.set(14,8,6);scene.add(le);
+const grid=new THREE.GridHelper(70,34,0x2c2436,0x17131e);grid.position.y=-3.2;scene.add(grid);
+
+const BARRIERS=[
+ {title:'Relativization',era:'Baker · Gill · Solovay — 1975',
+  body:'Diagonalization relativizes: it keeps working when every machine gets the same oracle. BGS built oracle worlds A and B with P^A = NP^A but P^B ≠ NP^B — so any technique that relativizes proves statements true in both worlds and can never resolve ours. The oracles also warn: P = NP is not an arithmetic inevitability but a delicate fact about this computational universe.',
+  veto:'vetoes: all diagonalization'},
+ {title:'Natural Proofs',era:'Razborov · Rudich — 1994',
+  body:'Every known circuit lower bound shares a two-part shape: a constructive, polynomially-checkable property of truth tables that small circuits fail. Razborov–Rudich proved that if one-way functions exist, such a property would be a working PRF distinguisher — so a natural proof of P ≠ NP is, precisely, a break of modern cryptography. Miles (2012) made it literal: his natural-property-style tooling attacks AES-family ciphers. Lower bounds and cryptanalysis are the same algorithm pointed at different inputs.',
+  veto:'vetoes: circuit lower-bound templates'},
+ {title:'Algebrization',era:'Aaronson · Wigderson — 2008',
+  body:'After relativization, hope moved to arithmetization — encoding computation as low-degree polynomials, the engine behind IP = PSPACE and the PCP theorem. Aaronson–Wigderson defined algebraic oracles that answer low-degree-extension queries too, and built oracle worlds separating the relevant classes in both directions. The three barriers now jointly veto nearly the entire 20th-century proof toolbox.',
+  veto:'vetoes: arithmetization-based arguments'}
+];
+
+/* monument groups */
+const groups=[];
+const mat=(c,o={})=>new THREE.MeshStandardMaterial({color:c,metalness:.45,roughness:.35,...o});
+const wire=(c,o={})=>new THREE.MeshBasicMaterial({color:c,wireframe:true,transparent:true,opacity:.5,...o});
+
+/* I. Relativization — two oracle-world bubbles, twins that disagree */
+const g1=new THREE.Group();
+function bubble(color,x){
+  const b=new THREE.Group();
+  b.add(new THREE.Mesh(new THREE.IcosahedronGeometry(2.4,1),wire(color,{opacity:.34})));
+  const p1=new THREE.Mesh(new THREE.SphereGeometry(0.55,20,16),mat(color,{emissive:color,emissiveIntensity:.5}));
+  p1.position.set(-0.75,0,0);b.add(p1);
+  const p2=new THREE.Mesh(new THREE.SphereGeometry(0.55,20,16),mat(color,{emissive:color,emissiveIntensity:.5}));
+  p2.position.set(0.75,0,0);b.add(p2);
+  b.position.x=x;b.userData={p1,p2};return b;
+}
+const wA=bubble(0x3ddbb0,-1.9), wB=bubble(0xff6a3d,1.9);
+g1.add(wA,wB);
+g1.userData.mutate=t=>{
+  wA.children[1].position.y=Math.sin(t*1.2)*0.4;wA.children[2].position.y=Math.sin(t*1.2)*0.4; // world A: twins in lockstep
+  wB.children[1].position.y=Math.sin(t*1.2)*0.4;wB.children[2].position.y=-Math.sin(t*1.2)*0.4; // world B: diverged
+  wA.rotation.y=t*0.25;wB.rotation.y=-t*0.25;
+};
+
+/* II. Natural proofs — truth-table slab + random vs PRF clouds */
+const g2=new THREE.Group();
+const slab=new THREE.Group();
+const cell=new THREE.BoxGeometry(0.34,0.14,0.34);
+for(let i=0;i<10;i++)for(let j=0;j<10;j++){
+  const m=new THREE.Mesh(cell,new THREE.MeshStandardMaterial({
+    color:0x1c1826,metalness:.3,roughness:.6,
+    emissive:Math.random()<0.5?0xf0b13e:0x000000,emissiveIntensity:Math.random()<0.5?rand(0.15,0.7):0}));
+  m.position.set((i-4.5)*0.42,0,(j-4.5)*0.42);slab.add(m);
+}
+slab.position.y=-1.2;g2.add(slab);
+const cloudA=new THREE.Points(
+  (()=>{const g=new THREE.BufferGeometry();const a=new Float32Array(160*3);
+   for(let i=0;i<160;i++){a[i*3]=rand(-1.6,1.6);a[i*3+1]=rand(0.4,3.4);a[i*3+2]=rand(-1.6,1.6);}g.setAttribute('position',new THREE.BufferAttribute(a,3));return g;})(),
+  new THREE.PointsMaterial({color:0xff6a3d,size:0.09,transparent:true,opacity:.85}));
+const cloudB=new THREE.Points(
+  (()=>{const g=new THREE.BufferGeometry();const a=new Float32Array(160*3);
+   for(let i=0;i<160;i++){const th=rand(TAU),r=rand(0.4,1.55);a[i*3]=Math.cos(th)*r;a[i*3+2]=Math.sin(th)*r;a[i*3+1]=0.4+(i/160)*3.0+rand(-0.12,0.12);}g.setAttribute('position',new THREE.BufferAttribute(a,3));return g;})(),
+  new THREE.PointsMaterial({color:0xf0b13e,size:0.09,transparent:true,opacity:.85}));
+g2.add(cloudA,cloudB);
+g2.userData.mutate=t=>{cloudA.rotation.y=t*0.3;cloudB.rotation.y=-t*0.22;slab.rotation.y=t*0.1;};
+const slabMat=slab.children.map(c=>c.material);
+
+/* III. Algebrization — a low-degree polynomial surface pierced by an oracle spike */
+const g3=new THREE.Group();
+const surfGeo=(()=>{const g=new THREE.PlaneGeometry(5.4,5.4,26,26);g.rotateX(-Math.PI/2);return g;})();
+const surf=new THREE.Mesh(surfGeo,new THREE.MeshBasicMaterial({color:0x3ddbb0,wireframe:true,transparent:true,opacity:.42}));
+g3.add(surf);
+const spike=new THREE.Mesh(new THREE.ConeGeometry(0.5,3.2,24),mat(0xf0b13e,{emissive:0xf0b13e,emissiveIntensity:.55,transparent:true,opacity:.9}));
+spike.position.y=1.4;g3.add(spike);
+g3.userData.mutate=t=>{
+  const pos=surfGeo.attributes.position;
+  for(let i=0;i<pos.count;i++){
+    const x=pos.getX(i),z=pos.getZ(i);
+    pos.setY(i,Math.sin(x*0.9+t*1.4)*0.4+Math.cos(z*0.9-t)*0.35);
+  }
+  pos.needsUpdate=true;
+  spike.rotation.y=t*0.8;spike.position.y=1.4+Math.sin(t*1.6)*0.25;
+};
+groups.push({g:g1,x:-1},{g:g2,x:0},{g:g3,x:1});
+
+/* layout + pedestals */
+const layout=()=>{
+  const w=canvas.clientWidth||1;
+  const spread=clamp(w/135,4.6,8.6);
+  groups.forEach((gr,i)=>{
+    gr.g.position.set((i-1)*spread,0.6,0);
+    gr.g.userData.baseX=gr.g.position.x;
+  });
+};
+groups.forEach(gr=>{
+  gr.g.traverse(o=>{if(o.isMesh||o.isPoints)o.userData.rootGrp=gr.g;});
+  scene.add(gr.g);
+  const ped=new THREE.Mesh(new THREE.CylinderGeometry(1.15,1.45,0.3,28),mat(0x141019,{roughness:.7}));
+  ped.position.y=-2.85;gr.g.add(ped);gr.ped=ped;
+});
+layout();
+window.addEventListener('resize',layout);
+
+/* ring markers under each monument */
+groups.forEach((gr,i)=>{
+  const ring=new THREE.Mesh(new THREE.TorusGeometry(1.9,0.02,8,64),
+    new THREE.MeshBasicMaterial({color:[0xff6a3d,0xf0b13e,0x3ddbb0][i],transparent:true,opacity:.4}));
+  ring.rotation.x=-Math.PI/2;ring.position.y=-2.98;gr.g.add(ring);gr.ring=ring;
+});
+
+/* interaction */
+const orb=makeOrbit(canvas,{yaw:0,pitch:0.12,dist:15.5,minDist:9,maxDist:26,zoom:true});
+const target=new THREE.Vector3(0,0.6,0);
+let hoverGrp=null,activeGrp=-1;
+const ray=new THREE.Raycaster();const mouseV=new THREE.Vector2();
+function pick(e){
+  const r=canvas.getBoundingClientRect();
+  mouseV.x=((e.clientX-r.left)/r.width)*2-1;
+  mouseV.y=-((e.clientY-r.top)/r.height)*2+1;
+  ray.setFromCamera(mouseV,camera);
+  const hits=ray.intersectObjects(groups.map(g=>g.g),true);
+  for(const h of hits){let o=h.object;while(o&&!o.userData.isRoot)o=o.parent;
+    const root=h.object.userData.rootGrp;
+    if(root)return groups.findIndex(g=>g.g===root);}
+  return -1;
+}
+canvas.addEventListener('pointermove',e=>{
+  const h=pick(e);
+  hoverGrp=h;
+  canvas.style.cursor=h>=0?'pointer':'grab';
+});
+canvas.addEventListener('click',e=>{
+  if(orb.moved>6)return;
+  const h=pick(e);
+  if(h>=0)selectBarrier(h);
+});
+
+function selectBarrier(i){
+  activeGrp=i;
+  $$('.btab').forEach((b,k)=>b.classList.toggle('active',k===i));
+  const B=BARRIERS[i];
+  $('#bc-era').textContent=B.era;$('#bc-title').textContent=B.title;
+  $('#bc-body').textContent=B.body;$('#bc-veto').textContent=B.veto;
+  $('#barrier-card').classList.add('open');
+}
+$('#barrier-x').addEventListener('click',()=>{$('#barrier-card').classList.remove('open');activeGrp=-1;});
+$$('.btab').forEach((b,k)=>b.addEventListener('click',()=>selectBarrier(k)));
+
+let visible=true;
+new IntersectionObserver(es=>visible=es[0].isIntersecting,{threshold:0.05}).observe(canvas);
+function resize(){
+  const w=canvas.clientWidth,h=canvas.clientHeight;if(!w||!h)return;
+  renderer.setSize(w,h,false);camera.aspect=w/h;camera.updateProjectionMatrix();
+}
+window.addEventListener('resize',resize);resize();
+
+const clock=new THREE.Clock();
+function frame(){
+  requestAnimationFrame(frame);
+  if(!visible)return;
+  const t=clock.getElapsedTime();
+  orb.tick();orb.auto(0.0011);
+  const px=camPos(orb,target);
+  camera.position.set(px[0],px[1],px[2]);camera.lookAt(target);
+  groups.forEach((gr,i)=>{
+    gr.g.rotation.y=(gr.g.userData.mutate?t*0.0:0);
+    if(gr.g.userData.mutate)gr.g.userData.mutate(t);
+    const focus=(activeGrp===i)||hoverGrp===i;
+    const targetS=focus?1.07:1;
+    gr.g.scale.setScalar(lerp(gr.g.scale.x,targetS,0.12));
+    gr.ring.material.opacity=focus?0.85:0.35;
+    gr.ring.rotation.z=t*(focus?0.9:0.25);
+    gr.ped.material.emissive=new THREE.Color(focus?0x2a2130:0x000000);
+    gr.g.position.y=0.6+Math.sin(t*0.8+i*2.1)*0.14;
+  });
+  renderer.render(scene,camera);
+}
+frame();
+/* open first barrier on tab click defaults */
+selectBarrier(0);$('#barrier-card').classList.remove('open');activeGrp=-1;
+})();
+</script>
+
+<script>
+/* ============================================================
+   04 — KARP REDUCTION WEB · 3D graph + projected DOM labels
+   ============================================================ */
+(function web(){
+if(!hasWebGL)return;
+const canvas=$('#web-canvas');if(!canvas)return;
+const renderer=makeRenderer(canvas);
+const scene=new THREE.Scene();
+scene.fog=new THREE.Fog(0x0c0a10,16,60);
+const camera=new THREE.PerspectiveCamera(46,1,0.1,120);
+scene.add(new THREE.AmbientLight(0x554a38,1.05));
+const lg=new THREE.PointLight(0xf0b13e,1.2,50);lg.position.set(0,10,12);scene.add(lg);
+
+const NODES=[
+ {n:'SAT',        tag:'the pivot of the web', p:[0,0,0],    s:1.05, core:true,
+  d:'Boolean satisfiability: does an assignment make every clause true? Cook 1971 proved it NP-hard; Levin independently framed it. If SAT ∈ P then P = NP — full stop. The Clay Million sits on this node.'},
+ {n:'3-SAT',      tag:'karp 1972 · the workhorse', p:[-5.5,2.2,2], s:0.8,
+  d:'SAT restricted to 3 literals per clause — NP-complete, and the substrate of the phase transition at α ≈ 4.267. SETH is stated about this node: k-SAT needs 2^(1−ε)n for every ε > 0.'},
+ {n:'Clique',     tag:'karp 1972', p:[5.6,2.8,-2.6], s:0.66,
+  d:'Find a k-node complete subgraph. Razborov\u2019s 1985 monotone lower bound attacked exactly this problem — n^Ω(log n) gates — the shot that natural proofs later neutralized.'},
+ {n:'Vertex Cover',tag:'via clique complement', p:[2.6,4.4,3.4], s:0.6,
+  d:'Pick ≤ k nodes touching every edge. Reduces to/from Clique by graph complementation; the gateway to approximation-hardness results.'},
+ {n:'Hamiltonian Cycle',tag:'karp 1972', p:[6.4,-2.4,2.2], s:0.66,
+  d:'Visit every node exactly once and return. The problem animating SIM-01 on this page — verification is a walk, search is n! candidates.'},
+ {n:'TSP (decision)',tag:'the salesman falls too', p:[8.2,-4.6,-3.4], s:0.6,
+  d:'Is there a tour shorter than B? The optimization version drives logistics everywhere. A polynomial SAT solver collapses it by binary search on B.'},
+ {n:'Subset Sum', tag:'karp 1972', p:[-6.2,-2.2,-2.2], s:0.66,
+  d:'Is there a subset of the numbers summing to t? The arithmetic face of NP-completeness; cryptography\u2019s knapsack schemes lived and died on this node.'},
+ {n:'Knapsack',   tag:'via subset sum', p:[2.4,-5.6,-2.2], s:0.56,
+  d:'Budgeted selection with weights and values. The optimization canon\u2019s favorite toy — exact solutions are NP search like everything else here.'},
+ {n:'3-Colorability',tag:'karp 1972', p:[-1.2,5.4,-3.6], s:0.6,
+  d:'Can the graph be 3-colored? Reductions flow to and from SAT; also the classic setting for PCP-style gap hardness.'},
+ {n:'Set Cover',  tag:'karp 1972', p:[-2.6,-5.4,3.2], s:0.56,
+  d:'Cover the universe with ≤ k sets. Inapproximability landmark: (1−o(1))·ln n hardness rides on P ≠ NP-flavored assumptions.'},
+ {n:'Integer Prog.',tag:'linear · discrete', p:[-8.4,0.4,-3.8], s:0.6,
+  d:'Linear objectives over integer variables — the operations-research giant. SAT encodings of ILP instances power modern industrial solvers.'},
+ {n:'Exact Cover',tag:'karp 1972', p:[-3.4,4.2,3.8], s:0.56,
+  d:'Pick rows covering each column exactly once — Dancing Links\u2019 famous target, and the host of many utility reductions.'},
+ {n:'Bin Packing',tag:'via exact cover', p:[5.0,0.8,4.6], s:0.5,
+  d:'Fit items into fewest bins. Strongly NP-hard even for two bins\u2019 worth of structure — scheduling and logistics bend here.'}
+];
+const EDGES=[[0,1],[1,2],[2,3],[3,4],[4,5],[1,6],[6,7],[1,8],[8,9],[0,10],[10,11],[11,12],[3,9],[1,10],[4,12]];
+
+const grp=new THREE.Group();scene.add(grp);
+const nodes=NODES.map((N,i)=>{
+  const col=i===0?0xf0b13e:0xece6d8;
+  const m=new THREE.Mesh(new THREE.SphereGeometry(0.34*(N.s||0.6),22,16),
+    new THREE.MeshStandardMaterial({color:col,metalness:.5,roughness:.35,
+      emissive:i===0?0xf0b13e:0x8a7a5a,emissiveIntensity:i===0?.85:.18}));
+  m.position.set(...N.p);m.userData.i=i;grp.add(m);N.mesh=m;return N;
+});
+/* edges */
+const edgeMat=new THREE.LineBasicMaterial({color:0x6b6557,transparent:true,opacity:.38});
+const pulses=[];
+EDGES.forEach(([a,b],k)=>{
+  const A=nodes[a].mesh.position,B=nodes[b].mesh.position;
+  const g=new THREE.BufferGeometry().setFromPoints([A,B]);
+  grp.add(new THREE.Line(g,edgeMat));
+  const pu=new THREE.Mesh(new THREE.SphereGeometry(0.07,8,6),
+    new THREE.MeshBasicMaterial({color:a===0?0xf0b13e:0x3ddbb0,transparent:true,opacity:.9}));
+  grp.add(pu);
+  pulses.push({pu,a,b,t:rand(1),sp:rand(0.18,0.5),back:Math.random()<0.5});
+});
+/* DOM labels */
+const labelsBox=$('#web-labels');
+const labelEls=nodes.map((N,i)=>{
+  const el=document.createElement('button');
+  el.className='web-label'+(i===0?' sat':'');
+  el.textContent=N.n;
+  el.addEventListener('click',()=>selectNode(i));
+  labelsBox.appendChild(el);return el;
+});
+function selectNode(i){
+  const N=nodes[i];
+  $('#wi-name').textContent=N.n;
+  $('#wi-tag').textContent=N.tag;
+  $('#wi-desc').textContent=N.d;
+  nodes.forEach((M,k)=>{
+    M.mesh.material.emissiveIntensity=(k===i)?1.4:(M.core?0.85:0.18);
+    labelEls[k].classList.toggle('active',k===i);
+  });
+}
+nodes.forEach((M,k)=>{if(k>0)M.mesh.material.emissiveIntensity=0.18;});
+
+/* raycast pick */
+const ray=new THREE.Raycaster();const mv=new THREE.Vector2();let downAt=0;
+canvas.addEventListener('pointerdown',()=>downAt=performance.now());
+canvas.addEventListener('pointerup',e=>{
+  if(performance.now()-downAt>220)return;
+  const r=canvas.getBoundingClientRect();
+  mv.x=((e.clientX-r.left)/r.width)*2-1;mv.y=-((e.clientY-r.top)/r.height)*2+1;
+  ray.setFromCamera(mv,camera);
+  const hits=ray.intersectObjects(nodes.map(n=>n.mesh));
+  if(hits.length)selectNode(hits[0].object.userData.i);
+});
+
+const orb=makeOrbit(canvas,{yaw:0.35,pitch:0.18,dist:17,minDist:10,maxDist:26,zoom:true});
+const target=new THREE.Vector3(0,0,0);
+let visible=true;
+new IntersectionObserver(es=>visible=es[0].isIntersecting,{threshold:0.05}).observe(canvas);
+function resize(){
+  const w=canvas.clientWidth,h=canvas.clientHeight;if(!w||!h)return;
+  renderer.setSize(w,h,false);camera.aspect=w/h;camera.updateProjectionMatrix();
+}
+window.addEventListener('resize',resize);resize();
+
+const clock=new THREE.Clock();
+const v3=new THREE.Vector3();
+function frame(){
+  requestAnimationFrame(frame);
+  if(!visible)return;
+  const t=clock.getElapsedTime();
+  orb.tick();orb.auto(0.0014);
+  const px=camPos(orb,target);
+  camera.position.set(px[0],px[1],px[2]);camera.lookAt(target);
+  grp.rotation.y=Math.sin(t*0.1)*0.08;
+  /* pulses along edges */
+  for(const P of pulses){
+    P.t+=P.sp*0.016;
+    if(P.t>1){P.t=0;P.back=!P.back;}
+    const A=nodes[P.a].mesh.position,B=nodes[P.b].mesh.position;
+    const u=P.back?1-P.t:P.t;
+    P.pu.position.lerpVectors(A,B,u);
+    P.pu.material.opacity=0.25+0.65*Math.sin(P.t*Math.PI);
+  }
+  nodes.forEach((N,i)=>{
+    N.mesh.position.y=N.p[1]+Math.sin(t*0.9+i*1.7)*0.18;
+  });
+  renderer.render(scene,camera);
+  /* project labels */
+  const w=canvas.clientWidth,h=canvas.clientHeight;
+  nodes.forEach((N,i)=>{
+    v3.copy(N.mesh.position).applyMatrix4(grp.matrixWorld).project(camera);
+    const el=labelEls[i];
+    if(v3.z>1){el.style.display='none';return;}
+    el.style.display='';
+    el.style.left=((v3.x*0.5+0.5)*w)+'px';
+    el.style.top=((-v3.y*0.5+0.5)*h - (16+N.s*14))+'px';
+    el.style.opacity=clamp(1.15-v3.z*0.25,0.25,1);
+  });
+}
+frame();
+})();
+</script>

@@ -119,7 +119,10 @@ nav.top.scrolled{border-bottom-color:var(--line);background:rgba(7,6,9,.82)}
   text-decoration:none!important;transition:transform .25s,box-shadow .25s;display:inline-block;
 }
 .nav-cta:hover{transform:translateY(-1px);box-shadow:0 6px 24px rgba(240,177,62,.35)}
-@media(max-width:1020px){.nav-links a{display:none}.nav-links a.hot{display:inline-block}}
+@media(max-width:1100px){
+  .nav-links a{display:none}
+  .nav-links a.hot,.nav-links a.nav-cta{display:inline-block}
+}
 
 /* ---------- layout shells ---------- */
 .shell{max-width:var(--maxw);margin:0 auto;padding:0 28px}
@@ -209,10 +212,16 @@ h1.hero-title .qm{color:var(--faint);font-weight:300}
 @media(max-width:520px){
   .hero-hint{display:none}
   .scroll-cue{display:none}
-  .brand-name{font-size:15px}
-  nav.top{padding:12px 16px}
+  nav.top{padding:10px 16px;min-height:58px}
+  .brand{min-width:0}
+  .brand-name{font-size:14px;white-space:nowrap}
+  .brand-sub{display:none}
+  .nav-links{gap:0}
+  .nav-links a.hot{display:none}
+  .nav-cta{font-size:10px;letter-spacing:.1em;padding:8px 10px}
   .shell{padding:0 18px}
   section.block{padding:88px 0}
+  .hero-inner{justify-content:flex-start;min-height:0;padding:86px 0 48px}
 }
 
 /* ---------- sim panels ---------- */
@@ -430,9 +439,9 @@ input.worlds-slider{width:100%;margin-top:44px}
 
 /* ---------- article ---------- */
 #article{background:linear-gradient(180deg,var(--bg) 0%,#0a0810 12%,#0a0810 88%,var(--bg) 100%)}
-.article-grid{display:grid;grid-template-columns:240px 1fr;gap:44px;align-items:start}
+.article-grid{display:grid;grid-template-columns:240px minmax(0,1fr);gap:44px;align-items:start;min-width:0}
 @media(max-width:940px){.article-grid{grid-template-columns:1fr}}
-.toc{position:sticky;top:92px;display:flex;flex-direction:column;gap:2px;max-height:calc(100vh - 130px);overflow-y:auto}
+.toc{position:sticky;top:92px;align-self:start;display:flex;flex-direction:column;gap:2px;max-height:calc(100vh - 130px);overflow-y:auto}
 .toc .toc-t{font-family:var(--font-mono);font-size:10px;letter-spacing:.3em;text-transform:uppercase;color:var(--faint);margin-bottom:12px}
 .toc a{
   display:block;
@@ -445,7 +454,7 @@ input.worlds-slider{width:100%;margin-top:44px}
 .paper{
   background:linear-gradient(180deg,#0f0d13,#0b0a0f);
   border:1px solid var(--line);border-radius:var(--radius);padding:clamp(26px,4.5vw,64px);
-  position:relative;
+  position:relative;min-width:0;overflow:hidden;
 }
 .paper::before{content:"";position:absolute;inset:0;border-radius:var(--radius);pointer-events:none;
   background:radial-gradient(ellipse 60% 30% at 50% 0%,rgba(240,177,62,.05),transparent)}
@@ -467,6 +476,7 @@ input.worlds-slider{width:100%;margin-top:44px}
 }
 .paper hr{border:none;border-top:1px solid var(--line);margin:36px 0}
 .paper table{width:100%;border-collapse:collapse;margin:20px 0;font-size:13px}
+.paper table{display:block;max-width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch}
 .paper th{font-family:var(--font-mono);font-size:10.5px;letter-spacing:.18em;text-transform:uppercase;color:var(--gold);
   text-align:left;padding:10px 12px;border-bottom:1px solid var(--line-strong)}
 .paper td{padding:11px 12px;border-bottom:1px solid var(--line);color:var(--muted);line-height:1.6;vertical-align:top}
@@ -1750,6 +1760,7 @@ frame();
 (function hc(){
 const canvas=$('#hc-canvas');if(!canvas)return;
 const ctx=canvas.getContext('2d');
+const logicalHeight=+canvas.getAttribute('height')||420;
 let n=10,nodes=[],edges=[],cycle=[],cycleSet={},adj=[];
 let anim=null,mode='idle',pathEdges=[],certFlash=[],failFlash=[];
 const TEAL='#3ddbb0',GOLD='#f0b13e',EMBER='#ff6a3d',DANGER='#e5484d',INK='rgba(236,230,216,';
@@ -1819,7 +1830,7 @@ function build(){
 function setSize(){
   const DPR=Math.min(devicePixelRatio||1,2);
   const w=canvas.clientWidth||canvas.parentElement.clientWidth;
-  const h=+canvas.getAttribute('height');
+  const h=logicalHeight;
   canvas.width=w*DPR;canvas.height=h*DPR;canvas.style.height=h+'px';
   ctx.setTransform(DPR,0,0,DPR,0,0);
   canvas.logicalW=w;canvas.logicalH=h;
@@ -1936,6 +1947,7 @@ setSize();build();
 (function sat(){
 const canvas=$('#sat-canvas');if(!canvas)return;
 const ctx=canvas.getContext('2d');
+const logicalHeight=+canvas.getAttribute('height')||400;
 let results=[],running=false,startA=2.0,elapsed=0,peakB=0,satCount=0,totalCount=0,curPulse=0;
 const CAP=40000;
 
@@ -2027,7 +2039,7 @@ function runSweep(){
 function fmtN(v){return v>=1e6?(v/1e6).toFixed(1)+'M':v>=1000?(v/1000).toFixed(1)+'k':Math.round(v).toString();}
 function setSize(){
   const DPR=Math.min(devicePixelRatio||1,2);
-  const w=canvas.clientWidth||canvas.parentElement.clientWidth,h=+canvas.getAttribute('height');
+  const w=canvas.clientWidth||canvas.parentElement.clientWidth,h=logicalHeight;
   canvas.width=w*DPR;canvas.height=h*DPR;canvas.style.height=h+'px';
   ctx.setTransform(DPR,0,0,DPR,0,0);canvas.logicalW=w;canvas.logicalH=h;
 }
